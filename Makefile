@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++17
+CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -O2 -g -fno-omit-frame-pointer
 INCLUDES = -I/opt/homebrew/include
 LDFLAGS = -L/opt/homebrew/lib
 LIBS = -lSDL2
