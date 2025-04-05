@@ -105,11 +105,12 @@ void configureChannelFour(APU &apu, int initialVolume, int envelopePeriod,
 int main() {
 
   APU apu;
-  apu.setAPUStatus(true);
+  apu.setAPUStatus(true); // Enable APU
+  apu.writeNR51(0x42); // Configure channel panning
 
   // Configure channels
   configureChannelOne(apu, 0, 3, 1547, 0, false, 0, false, 7, false, 7);
-  configureChannelTwo(apu, 0, 3, 1547, 0, false, 0, false);
+  configureChannelTwo(apu, 5, 3, 1547, 0, false, 0, false);
   BYTE wavePattern[16] = {0};
   for (int i = 0; i < 16; i++) {
     wavePattern[i] = 0x08;
