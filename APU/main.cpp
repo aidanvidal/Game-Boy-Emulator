@@ -33,7 +33,7 @@ void cpuUpdate(APU &apu) {
 
     // Every 44100Hz get the audio sample
     if (sampleCycleCounter >= cyclesPerSample) {
-      apu.getAudioSample(cycles);
+      apu.getAudioSample();
       sampleCycleCounter -= cyclesPerSample;
     }
   }

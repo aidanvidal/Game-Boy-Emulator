@@ -8,20 +8,18 @@ APU::APU() {
   NR50 = 0x77;
   APUEnabled = false;
 
-  // Initialize SDL audio
-  SDL_memset(&audioSpec, 0, sizeof(audioSpec));
-  audioSpec.freq = 44100;
-  audioSpec.format = AUDIO_F32SYS;
-  audioSpec.channels = 1;
-  audioSpec.samples = sampleSize; // Adjust as needed
-  audioSpec.callback = NULL;
-  audioSpec.userdata = this;
+	// Set up SDL audio spec
+	SDL_AudioSpec audioSpec;
+	audioSpec.freq = 44100;
+	audioSpec.format = AUDIO_F32SYS;
+	audioSpec.channels = 1;
+	audioSpec.samples = sampleSize;	// Adjust as needed
+	audioSpec.callback = NULL;
+	audioSpec.userdata = this;
 
-  if (SDL_OpenAudio(&audioSpec, &obtainedSpec) < 0) {
-    std::cerr << "Failed to open audio: " << SDL_GetError() << std::endl;
-  } else {
-    SDL_PauseAudio(0); // Start audio playback
-  }
+	SDL_AudioSpec obtainedSpec;
+	SDL_OpenAudio(&audioSpec, &obtainedSpec);
+	SDL_PauseAudio(0);
 }
 
 // APU Step
@@ -181,7 +179,7 @@ void APU::getVIN(bool &left, bool &right) {
 }
 
 // APU Helper Functions
-void APU::getAudioSample(int cycles) {
+void APU::getAudioSample() {
   if (!APUEnabled) {
     return;
   }

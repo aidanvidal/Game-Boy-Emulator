@@ -18,8 +18,6 @@ private:
   BYTE NR52;                  // Audio Master Control
   BYTE NR51;                  // Sound Panning
   BYTE NR50;                  // Master Volume and VIN Panning
-  SDL_AudioSpec audioSpec;    // SDL audio specification
-  SDL_AudioSpec obtainedSpec; // Obtained audio specification
 
   int bufferFill = 0;
   float buffer[sampleSize] = {0}; // Buffer for audio samples
@@ -99,7 +97,7 @@ public:
   BYTE getNR44() const;
 
   // APU Helper Functions
-  void getAudioSample(int cycles);
+  void getAudioSample();
 
   // Destructor
   ~APU();
