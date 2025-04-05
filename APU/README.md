@@ -36,7 +36,6 @@ make APU_emulator
 
 ## TODO
 - Fix channel 3 (wave channel) pitch issue
-- Add audio panning (right and left)
 - Fix some niche issues and bugs
 
 ---
