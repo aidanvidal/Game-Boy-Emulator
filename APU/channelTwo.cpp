@@ -166,11 +166,11 @@ void ChannelTwo::reset() {
 // 0.0 represents the middle of the waveform
 float ChannelTwo::getSample() {
   if (!state.dacEnabled) {
-    return 0.0f; // If DAC is disabled, output 0
+    return 7.0f; // If DAC is disabled, output 0
   }
 
   if (!isEnabled()) {
-    return 1.0f; // Disabled channel outputs "analog 1"
+    return 15.0f; // Disabled channel outputs "analog 1"
   }
 
   // Use duty table for waveform lookup
@@ -182,8 +182,7 @@ float ChannelTwo::getSample() {
   };
   int dutyType = getWaveDuty();
   int duty = dutyTable[dutyType][state.sequencePointer];
-  return (duty ? (state.volume / 15.0f) * 2.0f - 1.0f
-               : -1.0f); // Return a signed waveform
+  return duty ? state.volume : 0; // Return volume if duty is high
 }
 
 // Update the sequence timer

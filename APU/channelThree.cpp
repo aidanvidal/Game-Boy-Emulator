@@ -174,10 +174,10 @@ void ChannelThree::reset() {
 // Get the sample from Channel Three
 float ChannelThree::getSample() {
   if (!state.dacEnabled) {
-    return 0.0f; // If DAC is disabled, return 0
+    return 7.0f; // If DAC is disabled, return 0
   }
   if (!isEnabled()) {
-    return 1.0f; // Disabled channel outputs "analog 1"
+    return 15.0f; // Disabled channel outputs "analog 1"
   }
 
   // Convert the shifted digital sample to an analog value (-1.0 to 1.0)
@@ -189,10 +189,7 @@ float ChannelThree::getSample() {
   } else if (state.volume == 3) {
     analogSample >>= 2; // If volume is 3, shift right by 2
   }
-
-  // Convert to a float value between -1.0 and 1.0
-  float sample = (analogSample / 15.0f) * 2.0f - 1.0f;
-  return sample; // Return the sample
+  return analogSample;
 }
 
 // Update length timer

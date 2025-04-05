@@ -142,11 +142,11 @@ void ChannelOne::reset() {
 
 float ChannelOne::getSample() {
   if (!state.dacEnabled) {
-    return 0.0f;
+    return 7.0f;
   }
 
   if (!isEnabled()) {
-    return 1.0f;
+    return 15.0f;
   }
 
   static const int dutyTable[4][8] = {
@@ -157,7 +157,7 @@ float ChannelOne::getSample() {
   };
   int dutyType = getWaveDuty();
   int duty = dutyTable[dutyType][state.sequencePointer];
-  return (duty ? (state.volume / 15.0f) * 2.0f - 1.0f : -1.0f);
+  return duty ? state.volume : 0;
 }
 
 void ChannelOne::updateSequenceTimer(int cycles) {
