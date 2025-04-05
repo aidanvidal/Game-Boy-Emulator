@@ -8,18 +8,18 @@ APU::APU() {
   NR50 = 0x77;
   APUEnabled = false;
 
-	// Set up SDL audio spec
-	SDL_AudioSpec audioSpec;
-	audioSpec.freq = 44100;
-	audioSpec.format = AUDIO_F32SYS;
-	audioSpec.channels = 1;
-	audioSpec.samples = sampleSize;	// Adjust as needed
-	audioSpec.callback = NULL;
-	audioSpec.userdata = this;
+  // Set up SDL audio spec
+  SDL_AudioSpec audioSpec;
+  audioSpec.freq = 44100;
+  audioSpec.format = AUDIO_F32SYS;
+  audioSpec.channels = 2;
+  audioSpec.samples = sampleSize; // Adjust as needed
+  audioSpec.callback = NULL;
+  audioSpec.userdata = this;
 
-	SDL_AudioSpec obtainedSpec;
-	SDL_OpenAudio(&audioSpec, &obtainedSpec);
-	SDL_PauseAudio(0);
+  SDL_AudioSpec obtainedSpec;
+  SDL_OpenAudio(&audioSpec, &obtainedSpec);
+  SDL_PauseAudio(0);
 }
 
 // APU Step
@@ -184,15 +184,80 @@ void APU::getAudioSample() {
     return;
   }
 
+  // Get the audio samples
   float sampleOne = channelOne.getSample();
   float sampleTwo = channelTwo.getSample();
   float sampleThree = channelThree.getSample();
   float sampleFour = channelFour.getSample();
 
-  float finalSample = (sampleOne + sampleTwo + sampleThree + sampleFour) / 4.0f;
+  // Preform the mixing for the panning
+  BYTE volumeLeft = 0;
+  BYTE volumeRight = 0;
+  getVolumeLevel(volumeLeft, volumeRight);
+  volumeLeft = (volumeLeft * 128) / 7;
+  volumeRight = (volumeRight * 128) / 7;
+  float bufferLeft = 0.0f;
+  float bufferRight = 0.0f;
+  float tempLeft = 0.0f;
+  float tempRight = 0.0f;
+  bool leftChannel = false;
+  bool rightChannel = false;
 
-  buffer[bufferFill++] = finalSample;
+  // Channel 1 panning
+  getChannelPanning(1, leftChannel, rightChannel);
+  if (leftChannel) {
+    bufferLeft = (sampleOne) / 100.0f;
+    SDL_MixAudioFormat((Uint8 *)&tempLeft, (Uint8 *)&bufferLeft, AUDIO_F32SYS,
+                       sizeof(float), volumeLeft);
+  }
+  if (rightChannel) {
+    bufferRight = sampleOne / 100.0f;
+    SDL_MixAudioFormat((Uint8 *)&tempRight, (Uint8 *)&bufferRight, AUDIO_F32SYS,
+                       sizeof(float), volumeRight);
+  }
+  // Channel 2 panning
+  getChannelPanning(2, leftChannel, rightChannel);
+  if (leftChannel) {
+    bufferLeft = sampleTwo / 100.0f;
+    SDL_MixAudioFormat((Uint8 *)&tempLeft, (Uint8 *)&bufferLeft, AUDIO_F32SYS,
+                       sizeof(float), volumeLeft);
+  }
+  if (rightChannel) {
+    bufferRight = sampleTwo / 100.0f;
+    SDL_MixAudioFormat((Uint8 *)&tempRight, (Uint8 *)&bufferRight, AUDIO_F32SYS,
+                       sizeof(float), volumeRight);
+  }
+  // Channel 3 panning
+  getChannelPanning(3, leftChannel, rightChannel);
+  if (leftChannel) {
+    bufferLeft = sampleThree / 100.0f;
+    SDL_MixAudioFormat((Uint8 *)&tempLeft, (Uint8 *)&bufferLeft, AUDIO_F32SYS,
+                       sizeof(float), volumeLeft);
+  }
+  if (rightChannel) {
+    bufferRight = sampleThree / 100.0f;
+    SDL_MixAudioFormat((Uint8 *)&tempRight, (Uint8 *)&bufferRight, AUDIO_F32SYS,
+                       sizeof(float), volumeRight);
+  }
+  // Channel 4 panning
+  getChannelPanning(4, leftChannel, rightChannel);
+  if (leftChannel) {
+    bufferLeft = sampleFour / 100.0f;
+    SDL_MixAudioFormat((Uint8 *)&tempLeft, (Uint8 *)&bufferLeft, AUDIO_F32SYS,
+                       sizeof(float), volumeLeft);
+  }
+  if (rightChannel) {
+    bufferRight = sampleFour / 100.0f;
+    SDL_MixAudioFormat((Uint8 *)&tempRight, (Uint8 *)&bufferRight, AUDIO_F32SYS,
+                       sizeof(float), volumeRight);
+  }
 
+  // Add the samples to the buffer
+  buffer[bufferFill] = tempLeft;
+  buffer[bufferFill + 1] = tempRight;
+  bufferFill += 2;
+
+  // If the buffer is full, queue it for playback
   if (bufferFill >= sampleSize) {
     bufferFill = 0;
     while (SDL_GetQueuedAudioSize(1) > sampleSize * sizeof(float)) {
