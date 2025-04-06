@@ -35,8 +35,7 @@ make APU_emulator
 ```
 
 ## TODO
-- Fix channel 3 (wave channel) pitch issue
-- Fix some niche issues and bugs
+- Fix some niche issues and bugs that arise during further testing
 
 ---
 
