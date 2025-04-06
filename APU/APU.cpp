@@ -12,7 +12,7 @@ APU::APU() {
   SDL_AudioSpec audioSpec;
   audioSpec.freq = 44100;
   audioSpec.format = AUDIO_F32SYS;
-  audioSpec.channels = 2;
+  audioSpec.channels = 2; // Stereo
   audioSpec.samples = sampleSize; // Adjust as needed
   audioSpec.callback = NULL;
   audioSpec.userdata = this;
@@ -194,7 +194,7 @@ void APU::getAudioSample() {
   BYTE volumeLeft = 0;
   BYTE volumeRight = 0;
   getVolumeLevel(volumeLeft, volumeRight);
-  volumeLeft = (volumeLeft * 128) / 7;
+  volumeLeft = (volumeLeft * 128) / 7; // Scale to 0-128 for SDL
   volumeRight = (volumeRight * 128) / 7;
   float bufferLeft = 0.0f;
   float bufferRight = 0.0f;
@@ -206,48 +206,48 @@ void APU::getAudioSample() {
   // Channel 1 panning
   getChannelPanning(1, leftChannel, rightChannel);
   if (leftChannel) {
-    bufferLeft = (sampleOne) / 100.0f;
+    bufferLeft = (sampleOne) / 15.0f; // Normalize to 0-1
     SDL_MixAudioFormat((Uint8 *)&tempLeft, (Uint8 *)&bufferLeft, AUDIO_F32SYS,
                        sizeof(float), volumeLeft);
   }
   if (rightChannel) {
-    bufferRight = sampleOne / 100.0f;
+    bufferRight = sampleOne / 15.0f;
     SDL_MixAudioFormat((Uint8 *)&tempRight, (Uint8 *)&bufferRight, AUDIO_F32SYS,
                        sizeof(float), volumeRight);
   }
   // Channel 2 panning
   getChannelPanning(2, leftChannel, rightChannel);
   if (leftChannel) {
-    bufferLeft = sampleTwo / 100.0f;
+    bufferLeft = sampleTwo / 15.0f;
     SDL_MixAudioFormat((Uint8 *)&tempLeft, (Uint8 *)&bufferLeft, AUDIO_F32SYS,
                        sizeof(float), volumeLeft);
   }
   if (rightChannel) {
-    bufferRight = sampleTwo / 100.0f;
+    bufferRight = sampleTwo / 15.0f;
     SDL_MixAudioFormat((Uint8 *)&tempRight, (Uint8 *)&bufferRight, AUDIO_F32SYS,
                        sizeof(float), volumeRight);
   }
   // Channel 3 panning
   getChannelPanning(3, leftChannel, rightChannel);
   if (leftChannel) {
-    bufferLeft = sampleThree / 100.0f;
+    bufferLeft = sampleThree / 15.0f;
     SDL_MixAudioFormat((Uint8 *)&tempLeft, (Uint8 *)&bufferLeft, AUDIO_F32SYS,
                        sizeof(float), volumeLeft);
   }
   if (rightChannel) {
-    bufferRight = sampleThree / 100.0f;
+    bufferRight = sampleThree / 15.0f;
     SDL_MixAudioFormat((Uint8 *)&tempRight, (Uint8 *)&bufferRight, AUDIO_F32SYS,
                        sizeof(float), volumeRight);
   }
   // Channel 4 panning
   getChannelPanning(4, leftChannel, rightChannel);
   if (leftChannel) {
-    bufferLeft = sampleFour / 100.0f;
+    bufferLeft = sampleFour / 15.0f;
     SDL_MixAudioFormat((Uint8 *)&tempLeft, (Uint8 *)&bufferLeft, AUDIO_F32SYS,
                        sizeof(float), volumeLeft);
   }
   if (rightChannel) {
-    bufferRight = sampleFour / 100.0f;
+    bufferRight = sampleFour / 15.0f;
     SDL_MixAudioFormat((Uint8 *)&tempRight, (Uint8 *)&bufferRight, AUDIO_F32SYS,
                        sizeof(float), volumeRight);
   }
