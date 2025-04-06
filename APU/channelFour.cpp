@@ -22,7 +22,7 @@ void ChannelFour::writeNR42(BYTE value) { NR42 = value; }
 void ChannelFour::writeNR43(BYTE value) { NR43 = value; }
 void ChannelFour::writeNR44(BYTE value) {
   NR44 = value;
-  if ((value & 0x80) && state.dacEnabled) {
+  if ((value & 0x80)) {
     trigger();
   }
 }

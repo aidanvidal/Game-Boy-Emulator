@@ -26,7 +26,7 @@ void ChannelThree::writeNR33(BYTE value) { NR33 = value; }
 void ChannelThree::writeNR34(BYTE value) {
   NR34 = value;
   // Check if the trigger bit is set
-  if ((value & 0x80) && state.dacEnabled) {
+  if ((value & 0x80)) {
     // Trigger channel if the trigger bit is set
     trigger();
   }
@@ -143,7 +143,7 @@ void ChannelThree::trigger() {
     break;
   }
   state.sampleSelection = 1;                    // Reset sample selection
-  state.sampleTimer = (2048 - getPeriod()) * 4; // Reset sample timer
+  state.sampleTimer = (2048 - getPeriod()) * 2; // Reset sample timer
 }
 
 // Set the enabled state of the channel
@@ -238,7 +238,7 @@ void ChannelThree::updateSampleTimer(int cycles) {
   // Update the sample timer
   state.sampleTimer -= cycles;
   if (state.sampleTimer <= 0) {
-    state.sampleTimer = (2048 - getPeriod()) * 4; // Reset sample timer
+    state.sampleTimer = (2048 - getPeriod()) * 2; // Reset sample timer
     state.sampleSelection =
         (state.sampleSelection + 1) % 32; // Update sample selection
     // Read the new sample and store it in the buffer

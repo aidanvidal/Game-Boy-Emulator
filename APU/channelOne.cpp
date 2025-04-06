@@ -34,7 +34,7 @@ void ChannelOne::writeNR13(BYTE value) { NR13 = value; }
 
 void ChannelOne::writeNR14(BYTE value) {
   NR14 = value;
-  if ((value & 0x80) && state.dacEnabled) {
+  if ((value & 0x80)) {
     trigger();
   }
 }

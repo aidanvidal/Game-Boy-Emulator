@@ -29,8 +29,7 @@ void ChannelTwo::writeNR23(BYTE value) { NR23 = value; }
 void ChannelTwo::writeNR24(BYTE value) {
   NR24 = value;
   // Check if the trigger bit is set
-  if ((value & 0x80) && state.dacEnabled) {
-    // Trigger channel if the trigger bit is set
+  if ((value & 0x80) ) {
     trigger();
   }
 }
