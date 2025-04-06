@@ -113,7 +113,7 @@ int main() {
   configureChannelTwo(apu, 5, 3, 1547, 0, false, 0, false);
   BYTE wavePattern[16] = {0};
   for (int i = 0; i < 16; i++) {
-    wavePattern[i] = 0x08;
+    wavePattern[i] = (i < 8) ? 0xFF : 0x00; // Adjust as needed for your waveform
   }
   configureChannelThree(apu, true, 0, 3, 1547, false, wavePattern);
   configureChannelFour(apu, 0, 7, false, 0, true, 0, true, 7);
