@@ -19,6 +19,8 @@ private:
   BYTE NR51;                  // Sound Panning
   BYTE NR50;                  // Master Volume and VIN Panning
 
+  int frameCounter;
+  int audioCounter;
   int bufferFill = 0;
   float buffer[sampleSize] = {0}; // Buffer for audio samples
 
@@ -31,7 +33,7 @@ public:
 
   APU(); // Constructor
 
-  void apuStep();
+  void apuStep(int cycles);
   void resetAPU();
 
   // NR52 Helper Functions
@@ -97,7 +99,8 @@ public:
   BYTE getNR44() const;
 
   // APU Helper Functions
-  void getAudioSample();
+  void getAudioSample(int cycles);
+  void updateChannelTimers(int cycles);
 
   // Destructor
   ~APU();

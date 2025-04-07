@@ -6,13 +6,15 @@ APU::APU() {
   NR52 = 0x00;
   NR51 = 0xF3;
   NR50 = 0x77;
+  frameCounter = 0;
+  audioCounter = 0;
   APUEnabled = false;
 
   // Set up SDL audio spec
   SDL_AudioSpec audioSpec;
   audioSpec.freq = 44100;
   audioSpec.format = AUDIO_F32SYS;
-  audioSpec.channels = 2; // Stereo
+  audioSpec.channels = 2;         // Stereo
   audioSpec.samples = sampleSize; // Adjust as needed
   audioSpec.callback = NULL;
   audioSpec.userdata = this;
@@ -23,12 +25,19 @@ APU::APU() {
 }
 
 // APU Step
-void APU::apuStep() {
+void APU::apuStep(int cycles) {
   if (!APUEnabled)
     return;
 
+  // Update the frame sequencer
   static int step = 0;
+  frameCounter += cycles;
 
+  if (frameCounter < 8192) {
+    return; // Not enough cycles for a step
+  }
+
+  frameCounter -= 8192;
   if (step % 2 == 0) {
     // Clock the length timer
     if (channelOne.getLengthEnable() && channelOne.isEnabled()) {
@@ -179,11 +188,18 @@ void APU::getVIN(bool &left, bool &right) {
 }
 
 // APU Helper Functions
-void APU::getAudioSample() {
+void APU::getAudioSample(int cycles) {
   if (!APUEnabled) {
     return;
   }
 
+  audioCounter += cycles;
+
+  if (audioCounter < 95) {
+    return; // Not enough cycles for a sample
+  }
+
+  audioCounter -= 95;
   // Get the audio samples
   float sampleOne = channelOne.getSample();
   float sampleTwo = channelTwo.getSample();
@@ -265,6 +281,13 @@ void APU::getAudioSample() {
     }
     SDL_QueueAudio(1, buffer, sampleSize * sizeof(float));
   }
+}
+
+void APU::updateChannelTimers(int cycles) {
+  channelOne.updateSequenceTimer(cycles);
+  channelTwo.updateSequenceTimer(cycles);
+  channelThree.updateSampleTimer(cycles);
+  channelFour.updateLFSR(cycles);
 }
 
 /*--------Channel One Functions--------------*/

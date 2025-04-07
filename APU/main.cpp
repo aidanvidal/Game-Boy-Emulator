@@ -9,36 +9,16 @@ int handleInstruction() {
 void cpuUpdate(APU &apu) {
   const int MAXCYCLES = 69905;
   int cyclesThisUpdate = 0;
-  int apuCycleCounter = 0;
-  int sampleCycleCounter = 0;
-  const int cyclesPerSample = 4194304 / 44100;
 
   while (cyclesThisUpdate < MAXCYCLES) {
     int cycles = handleInstruction();
     cyclesThisUpdate += cycles;
-    apuCycleCounter += cycles;
-    sampleCycleCounter += cycles;
-    // Update the sequence timer for channels 1 and 2
-    apu.channelOne.updateSequenceTimer(cycles);
-    apu.channelTwo.updateSequenceTimer(cycles);
-    // Update the sample timer for channel 3
-    apu.channelThree.updateSampleTimer(cycles);
-    // Update the LFSR for channel 4
-    apu.channelFour.updateLFSR(cycles);
-    // Every 512Hz update the APU frame sequencer
-    if (apuCycleCounter >= 8192) {
-      apu.apuStep();
-      apuCycleCounter -= 8192;
-    }
-
-    // Every 44100Hz get the audio sample
-    if (sampleCycleCounter >= cyclesPerSample) {
-      apu.getAudioSample();
-      sampleCycleCounter -= cyclesPerSample;
-    }
+    /*-----------APU Controls--------------*/
+    apu.updateChannelTimers(cycles);
+    apu.apuStep(cycles);
+    apu.getAudioSample(cycles);
   }
 }
-
 /*--------Channel Configs--------------*/
 
 void configureChannelOne(APU &apu, int initialVolume, int waveDuty, int period,
@@ -106,14 +86,15 @@ int main() {
 
   APU apu;
   apu.setAPUStatus(true); // Enable APU
-  apu.writeNR51(0x42); // Configure channel panning
+  apu.writeNR51(0x42);    // Configure channel panning
 
   // Configure channels
   configureChannelOne(apu, 0, 3, 1547, 0, false, 0, false, 7, false, 7);
   configureChannelTwo(apu, 5, 3, 1547, 0, false, 0, false);
   BYTE wavePattern[16] = {0};
   for (int i = 0; i < 16; i++) {
-    wavePattern[i] = (i < 8) ? 0xFF : 0x00; // Adjust as needed for your waveform
+    wavePattern[i] =
+        (i < 8) ? 0xFF : 0x00; // Adjust as needed for your waveform
   }
   configureChannelThree(apu, true, 0, 3, 1547, false, wavePattern);
   configureChannelFour(apu, 0, 7, false, 0, true, 0, true, 7);
