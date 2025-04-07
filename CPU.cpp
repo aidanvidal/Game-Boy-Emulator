@@ -9,6 +9,7 @@ int handleInstruction() {
 
 void cpuUpdate(APU &apu, Timers &timers) {
   // CPU Counters
+  const int CPUFREQ = 4194304; // CPU frequency in Hz
   const int MAXCYCLES = 69905;
   int cyclesThisUpdate = 0;
 
@@ -26,4 +27,6 @@ void cpuUpdate(APU &apu, Timers &timers) {
   }
 }
 
-int main()
+int main(){
+    return 0;
+}
