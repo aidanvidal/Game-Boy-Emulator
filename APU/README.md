@@ -39,4 +39,4 @@ make APU_emulator
 
 ---
 
-Future blog post coming for this on my website.
+Check out my [blog post](https://aidanvidal.github.io/posts/GameBoy_Dev_APU.html) for more detailed information.
