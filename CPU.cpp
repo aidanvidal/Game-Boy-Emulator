@@ -1,5 +1,6 @@
 #include "APU/APU.h"
 #include "Timers.h"
+#include "Interrupts.h"
 
 /*--------------CPU Simulation-------------*/
 
