@@ -1,6 +1,7 @@
 #ifndef TIMERS_H
 #define TIMERS_H
 #include <cstdint>
+#include "Interrupts.h"
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -19,8 +20,9 @@ private:
     WORD divCounter; // 16-bit divider counter
 
     // TODO: Add interrupt member variable
+    Interrupts interrupts; // Interrupts object to handle interrupts
 public:
-    Timers(); // Constructor
+    Timers(Interrupts &interrupts); // Constructor
 
     void resetTimers(); // Reset the timer registers
     void writeData(WORD address, BYTE value); // Write data to the timer registers
