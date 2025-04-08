@@ -16,56 +16,53 @@ void Timers::resetTimers() {
   timaCycles = 0;
   divCounter = 0; // Reset the divider counter
 }
-void Timers::writeDIV() {
-  DIV = 0; // Write to the DIV register, any write resets it to 0
-}
-void Timers::writeTIMA(uint8_t value) {
-  TIMA = value; // Write to the TIMA register
-}
-void Timers::writeTMA(uint8_t value) {
-  TMA = value; // Write to the TMA register
-}
-void Timers::writeTAC(uint8_t value) {
-  TAC = value;                        // Write to the TAC register
-  TIMA_Enabled = (value & 0x04) != 0; // Check if the timer is enabled
-  switch (value & 0x03) {
-  case 0: // 4096 Hz
-    timaCycles = 4194304 / 4096;
+void Timers::writeData(WORD address, uint8_t value) {
+  switch (address) {
+  case 0xFF04: // DIV
+    DIV = 0;   // Writing to DIV resets it to 0
     break;
-  case 1: // 262144 Hz
-    timaCycles = 4194304 / 262144;
+  case 0xFF05:    // TIMA
+    TIMA = value; // Write directly to the TIMA register
     break;
-  case 2: // 65536 Hz
-    timaCycles = 4194304 / 65536;
+  case 0xFF06:   // TMA
+    TMA = value; // Write directly to the TMA register
     break;
-  case 3: // 16384 Hz
-    timaCycles = 4194304 / 16384;
+  case 0xFF07:                          // TAC
+    TAC = value;                        // Write directly to the TAC register
+    TIMA_Enabled = (value & 0x04) != 0; // Check if the timer is enabled
+    switch (value & 0x03) {
+    case 0: // 4096 Hz
+      timaCycles = 4194304 / 4096;
+      break;
+    case 1: // 262144 Hz
+      timaCycles = 4194304 / 262144;
+      break;
+    case 2: // 65536 Hz
+      timaCycles = 4194304 / 65536;
+      break;
+    case 3: // 16384 Hz
+      timaCycles = 4194304 / 16384;
+      break;
+    }
     break;
+  default:
+    break; // Invalid address
   }
 }
-uint8_t Timers::readDIV() {
-  return DIV; // Read from the DIV register
-}
-uint8_t Timers::readTIMA() {
-  return TIMA; // Read from the TIMA register
-}
-uint8_t Timers::readTMA() {
-  return TMA; // Read from the TMA register
-}
-uint8_t Timers::readTAC() {
-  return TAC; // Read from the TAC register
-}
-void Timers::resetDIV() {
-  DIV = 0; // Reset the DIV register
-}
-void Timers::resetTIMA() {
-  TIMA = 0; // Reset the TIMA register
-}
-void Timers::resetTMA() {
-  TMA = 0; // Reset the TMA register
-}
-void Timers::resetTAC() {
-  TAC = 0; // Reset the TAC register
+
+uint8_t Timers::readData(WORD address) const {
+  switch (address) {
+  case 0xFF04:   // DIV
+    return DIV;  // Read directly from the DIV register
+  case 0xFF05:   // TIMA
+    return TIMA; // Read directly from the TIMA register
+  case 0xFF06:   // TMA
+    return TMA;  // Read directly from the TMA register
+  case 0xFF07:   // TAC
+    return TAC;  // Read directly from the TAC register
+  default:
+    return 0xFF; // Invalid address, return default value
+  }
 }
 
 void Timers::updateTimers(WORD cycles) {
@@ -78,15 +75,15 @@ void Timers::updateTimers(WORD cycles) {
 
   if (TIMA_Enabled) {
     timaCounter += cycles;
-    while(timaCounter >= timaCycles){
-        timaCounter -= timaCycles; // Reset the cycle counter
-        TIMA++; // Increment the TIMA register
-        if(TIMA == 0){
-            // If TIMA overflows, set it to TMA
-            TIMA = TMA;
-            // Request an interrupt
-            //TODO: Set interrupt flag
-        }
+    while (timaCounter >= timaCycles) {
+      timaCounter -= timaCycles; // Reset the cycle counter
+      TIMA++;                    // Increment the TIMA register
+      if (TIMA == 0) {
+        // If TIMA overflows, set it to TMA
+        TIMA = TMA;
+        // Request an interrupt
+        // TODO: Set interrupt flag
+      }
     }
   }
 }

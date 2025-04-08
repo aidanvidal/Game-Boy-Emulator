@@ -23,21 +23,8 @@ public:
     Timers(); // Constructor
 
     void resetTimers(); // Reset the timer registers
-    void writeDIV(); // Write to the DIV register
-    void writeTIMA(BYTE value); // Write to the TIMA register
-    void writeTMA(BYTE value); // Write to the TMA register
-    void writeTAC(BYTE value); // Write to the TAC register
-
-    BYTE readDIV(); // Read from the DIV register
-    BYTE readTIMA(); // Read from the TIMA register
-    BYTE readTMA(); // Read from the TMA register
-    BYTE readTAC(); // Read from the TAC register
-
-    void resetDIV(); // Reset the DIV register
-    void resetTIMA(); // Reset the TIMA register
-    void resetTMA(); // Reset the TMA register
-    void resetTAC(); // Reset the TAC register
-
+    void writeData(WORD address, BYTE value); // Write data to the timer registers
+    BYTE readData(WORD address) const; // Read data from the timer registers
     void updateTimers(WORD cycles); // Increment the TIMA register
 };
 
