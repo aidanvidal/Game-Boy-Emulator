@@ -54,53 +54,11 @@ public:
   void getVolumeLevel(BYTE &left, BYTE &right);
   void getVIN(bool &left, bool &right);
 
-  // Channel One Functions
-  void writeNR10(BYTE value);
-  void writeNR11(BYTE value);
-  void writeNR12(BYTE value);
-  void writeNR13(BYTE value);
-  void writeNR14(BYTE value);
-  BYTE getNR10() const;
-  BYTE getNR11() const;
-  BYTE getNR12() const;
-  BYTE getNR13() const;
-  BYTE getNR14() const;
-
-  // Channel Two Functions
-  void writeNR21(BYTE value);
-  void writeNR22(BYTE value);
-  void writeNR23(BYTE value);
-  void writeNR24(BYTE value);
-  BYTE getNR21() const;
-  BYTE getNR22() const;
-  BYTE getNR23() const;
-  BYTE getNR24() const;
-
-  // Channel Three Functions
-  void writeNR30(BYTE value);
-  void writeNR31(BYTE value);
-  void writeNR32(BYTE value);
-  void writeNR33(BYTE value);
-  void writeNR34(BYTE value);
-  BYTE getNR30() const;
-  BYTE getNR31() const;
-  BYTE getNR32() const;
-  BYTE getNR33() const;
-  BYTE getNR34() const;
-
-  // Channel Four Functions
-  void writeNR41(BYTE value);
-  void writeNR42(BYTE value);
-  void writeNR43(BYTE value);
-  void writeNR44(BYTE value);
-  BYTE getNR41() const;
-  BYTE getNR42() const;
-  BYTE getNR43() const;
-  BYTE getNR44() const;
-
   // APU Helper Functions
   void getAudioSample(int cycles);
   void updateChannelTimers(int cycles);
+  void writeData(WORD address, BYTE value);
+  BYTE getData(WORD address) const;
 
   // Destructor
   ~APU();

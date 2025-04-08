@@ -290,49 +290,144 @@ void APU::updateChannelTimers(int cycles) {
   channelFour.updateLFSR(cycles);
 }
 
-/*--------Channel One Functions--------------*/
-void APU::writeNR10(BYTE value) { channelOne.setSweepPace(value); }
-void APU::writeNR11(BYTE value) { channelOne.setWaveDuty(value); }
-void APU::writeNR12(BYTE value) { channelOne.setInitialVolume(value); }
-void APU::writeNR13(BYTE value) { channelOne.setPeriod(value); }
-void APU::writeNR14(BYTE value) { channelOne.setTrigger(value & 0x80); }
-BYTE APU::getNR10() const { return channelOne.getNR10(); }
-BYTE APU::getNR11() const { return channelOne.getNR11(); }
-BYTE APU::getNR12() const { return channelOne.getNR12(); }
-BYTE APU::getNR13() const { return channelOne.getNR13(); }
-BYTE APU::getNR14() const { return channelOne.getNR14(); }
+void APU::writeData(WORD address, BYTE value) {
+  switch (address) {
+  // Channel One
+  case 0xFF10:
+    channelOne.writeNR10(value);
+    break; // NR10
+  case 0xFF11:
+    channelOne.writeNR11(value);
+    break; // NR11
+  case 0xFF12:
+    channelOne.writeNR12(value);
+    break; // NR12
+  case 0xFF13:
+    channelOne.writeNR13(value);
+    break; // NR13
+  case 0xFF14:
+    channelOne.writeNR14(value);
+    break; // NR14
 
-/*--------Channel Two Functions--------------*/
-void APU::writeNR21(BYTE value) { channelTwo.setWaveDuty(value); }
-void APU::writeNR22(BYTE value) { channelTwo.setInitialVolume(value); }
-void APU::writeNR23(BYTE value) { channelTwo.setPeriod(value); }
-void APU::writeNR24(BYTE value) { channelTwo.setTrigger(value & 0x80); }
-BYTE APU::getNR21() const { return channelTwo.getNR21(); }
-BYTE APU::getNR22() const { return channelTwo.getNR22(); }
-BYTE APU::getNR23() const { return channelTwo.getNR23(); }
-BYTE APU::getNR24() const { return channelTwo.getNR24(); }
+  // Channel Two
+  case 0xFF16:
+    channelTwo.writeNR21(value);
+    break; // NR21
+  case 0xFF17:
+    channelTwo.writeNR22(value);
+    break; // NR22
+  case 0xFF18:
+    channelTwo.writeNR23(value);
+    break; // NR23
+  case 0xFF19:
+    channelTwo.writeNR24(value);
+    break; // NR24
 
-/*--------Channel Three Functions--------------*/
-void APU::writeNR30(BYTE value) { channelThree.setDACEnable(value & 0x80); }
-void APU::writeNR31(BYTE value) { channelThree.setInitialLengthTimer(value); }
-void APU::writeNR32(BYTE value) { channelThree.setOutputLevel(value); }
-void APU::writeNR33(BYTE value) { channelThree.setPeriodLow(value); }
-void APU::writeNR34(BYTE value) { channelThree.setPeriodHigh(value); }
-BYTE APU::getNR30() const { return channelThree.getNR30(); }
-BYTE APU::getNR31() const { return channelThree.getNR31(); }
-BYTE APU::getNR32() const { return channelThree.getNR32(); }
-BYTE APU::getNR33() const { return channelThree.getNR33(); }
-BYTE APU::getNR34() const { return channelThree.getNR34(); }
+  // Channel Three
+  case 0xFF1A:
+    channelThree.writeNR30(value);
+    break; // NR30
+  case 0xFF1B:
+    channelThree.writeNR31(value);
+    break; // NR31
+  case 0xFF1C:
+    channelThree.writeNR32(value);
+    break; // NR32
+  case 0xFF1D:
+    channelThree.writeNR33(value);
+    break; // NR33
+  case 0xFF1E:
+    channelThree.writeNR34(value);
+    break; // NR34
 
-/*--------Channel Four Functions--------------*/
-void APU::writeNR41(BYTE value) { channelFour.setInitialLengthTimer(value); }
-void APU::writeNR42(BYTE value) { channelFour.setInitialVolume(value); }
-void APU::writeNR43(BYTE value) { channelFour.setClockShift(value); }
-void APU::writeNR44(BYTE value) { channelFour.setTrigger(value & 0x80); }
-BYTE APU::getNR41() const { return channelFour.getNR41(); }
-BYTE APU::getNR42() const { return channelFour.getNR42(); }
-BYTE APU::getNR43() const { return channelFour.getNR43(); }
-BYTE APU::getNR44() const { return channelFour.getNR44(); }
+  // Channel Four
+  case 0xFF20:
+    channelFour.writeNR41(value);
+    break; // NR41
+  case 0xFF21:
+    channelFour.writeNR42(value);
+    break; // NR42
+  case 0xFF22:
+    channelFour.writeNR43(value);
+    break; // NR43
+  case 0xFF23:
+    channelFour.writeNR44(value);
+    break; // NR44
+
+  // NR50, NR51, NR52
+  case 0xFF24:
+    writeNR50(value);
+    break; // NR50
+  case 0xFF25:
+    writeNR51(value);
+    break; // NR51
+  case 0xFF26:
+    writeNR52(value);
+    break; // NR52
+
+  default:
+    break; // Invalid address
+  }
+}
+
+BYTE APU::getData(WORD address) const {
+  switch (address) {
+  // Channel One
+  case 0xFF10:
+    return channelOne.getNR10(); // NR10
+  case 0xFF11:
+    return channelOne.getNR11(); // NR11
+  case 0xFF12:
+    return channelOne.getNR12(); // NR12
+  case 0xFF13:
+    return channelOne.getNR13(); // NR13
+  case 0xFF14:
+    return channelOne.getNR14(); // NR14
+
+  // Channel Two
+  case 0xFF16:
+    return channelTwo.getNR21(); // NR21
+  case 0xFF17:
+    return channelTwo.getNR22(); // NR22
+  case 0xFF18:
+    return channelTwo.getNR23(); // NR23
+  case 0xFF19:
+    return channelTwo.getNR24(); // NR24
+
+  // Channel Three
+  case 0xFF1A:
+    return channelThree.getNR30(); // NR30
+  case 0xFF1B:
+    return channelThree.getNR31(); // NR31
+  case 0xFF1C:
+    return channelThree.getNR32(); // NR32
+  case 0xFF1D:
+    return channelThree.getNR33(); // NR33
+  case 0xFF1E:
+    return channelThree.getNR34(); // NR34
+
+  // Channel Four
+  case 0xFF20:
+    return channelFour.getNR41(); // NR41
+  case 0xFF21:
+    return channelFour.getNR42(); // NR42
+  case 0xFF22:
+    return channelFour.getNR43(); // NR43
+  case 0xFF23:
+    return channelFour.getNR44(); // NR44
+
+  // NR50, NR51, NR52
+  case 0xFF24:
+    return NR50; // NR50
+  case 0xFF25:
+    return NR51; // NR51
+  case 0xFF26:
+    return NR52; // NR52
+
+  default:
+    return 0xFF; // Invalid address, return default value
+  }
+}
 
 // Destructor
 APU::~APU() {
