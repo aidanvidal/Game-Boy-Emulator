@@ -3,7 +3,7 @@
 // Constructor
 APU::APU() {
   // Initialize the APU registers
-  NR52 = 0x00;
+  NR52 = 0xF1;
   NR51 = 0xF3;
   NR50 = 0x77;
   frameCounter = 0;
