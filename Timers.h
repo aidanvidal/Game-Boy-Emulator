@@ -20,7 +20,7 @@ private:
     WORD divCounter; // 16-bit divider counter
 
     // TODO: Add interrupt member variable
-    Interrupts interrupts; // Interrupts object to handle interrupts
+    Interrupts* interrupts; // Interrupts object to handle interrupts
 public:
     Timers(Interrupts &interrupts); // Constructor
 

@@ -2,7 +2,7 @@
 
 Timers::Timers(Interrupts &interrupts)
     : DIV(0), TIMA(0), TMA(0), TAC(0), timaCounter(0), TIMA_Enabled(false),
-      timaCycles(0), divCounter(0), interrupts(interrupts) {
+      timaCycles(0), divCounter(0), interrupts(&interrupts) {
   // Constructor implementation
 }
 
@@ -82,7 +82,7 @@ void Timers::updateTimers(WORD cycles) {
         // If TIMA overflows, set it to TMA
         TIMA = TMA;
         // Request an interrupt
-        interrupts.setTimerFlag(true); // Set the timer interrupt flag
+        interrupts->setTimerFlag(true); // Set the timer interrupt flag
       }
     }
   }
