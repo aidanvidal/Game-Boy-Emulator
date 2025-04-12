@@ -33,3 +33,5 @@
 
 build/
 APU_emulator
+graphics
+testGPU.cpp
