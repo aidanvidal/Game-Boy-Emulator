@@ -1,7 +1,9 @@
 #include "GPU.h"
+#include <cstdint>
+#include <iostream>
 
 GPU::GPU(Interrupts *interrupts, bool CGB)
-    : interrupts(interrupts), cycleCount(0), vBlank(false), CGB(CGB) {
+    : interrupts(interrupts), cycleCount(0), CGB(CGB), vBlank(false) {
   // Initialize GPU registers
   LCDC = 0x91;
   LY = 0x00;
@@ -15,6 +17,9 @@ GPU::GPU(Interrupts *interrupts, bool CGB)
   OBP0 = 0xFF; // Default object palette 0
   OBP1 = 0xFF; // Default object palette 1
 
+  windowLine = 0;  // Initialize window line
+  spriteCount = 0; // Initialize sprite count
+
   // CGB only registers
   VRAMBank = 0; // Default VRAM bank
   // Initialize CGB palettes to white (RGB555 = 0x7FFF)
@@ -24,36 +29,28 @@ GPU::GPU(Interrupts *interrupts, bool CGB)
       objPalettes[i][j] = 0x7FFF;
     }
   }
-
-  // Initialize SDL
-  SDL_Init(SDL_INIT_VIDEO);
-  window = SDL_CreateWindow("Game Boy Emulator", SDL_WINDOWPOS_CENTERED,
-                            SDL_WINDOWPOS_CENTERED, 160 * 4, 144 * 4, 0);
-  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-                              SDL_TEXTUREACCESS_STREAMING, 160, 144);
-
-  // Initialize framebuffer to white
-  memset(frameBuffer, 0xFF, sizeof(frameBuffer));
 }
 GPU::~GPU() {
   // Destructor
 }
 
 void GPU::writeData(WORD address, BYTE value) {
-  // TODO: Handle CGB mode
-
-  // Handle VRAM and OAM writes
+  // Handle VRAM writes
   if (address >= 0x8000 && address < 0xA000) {
-    VRAM[(address & 0x1FFF) | (VRAMBank << 13)] = value; // Write to VRAM
-    return;
-  } else if (address >= 0xFE00 && address < 0xFEA0) {
-    OAM[address & 0xFF] = value; // Write to OAM
+    // Get the offset in the current VRAM bank
+    WORD offset = address & 0x1FFF;
+
+    // Apply VRAM bank selection for CGB mode
+    if (CGB && VRAMBank == 1) {
+      offset += 0x2000; // Add 8KB offset for bank 1
+    }
+
+    VRAM[offset] = value;
     return;
   }
-  // Handle CGB VRAM bank switching
-  else if (address == 0xFF4F) {
-    VRAMBank = value & 0x01; // Set the VRAM bank
+  // Handle OAM writes
+  else if (address >= 0xFE00 && address < 0xFEA0) {
+    OAM[address & 0xFF] = value;
     return;
   }
 
@@ -62,9 +59,8 @@ void GPU::writeData(WORD address, BYTE value) {
   case 0xFF40: // LCDC
     LCDC = value;
     break;
-  case 0xFF41: // STAT
-    STAT = STAT & 0x7 |
-           (value & 0xF8); // Update STAT, keep the lower 3 bits unchanged
+  case 0xFF41:                             // STAT
+    STAT = (STAT & 0x07) | (value & 0xF8); // Keep lower 3 bits
     break;
   case 0xFF42: // SCY
     SCY = value;
@@ -72,9 +68,9 @@ void GPU::writeData(WORD address, BYTE value) {
   case 0xFF43: // SCX
     SCX = value;
     break;
-  case 0xFF44:      // LY
-    LY = 0;         // Reset LY to 0 on write, it is read-only
-    windowLine = 0; // Reset window line on write
+  case 0xFF44: // LY - Read only, write resets
+    LY = 0;
+    windowLine = 0;
     break;
   case 0xFF45: // LYC
     LYC = value;
@@ -94,6 +90,9 @@ void GPU::writeData(WORD address, BYTE value) {
   case 0xFF4B: // WX
     WX = value;
     break;
+  case 0xFF4F: // VRAM Bank (CGB only)
+    VRAMBank = value & 0x01;
+    break;
   case 0xFF68: // BCPS (Background Palette Index)
     BCPS = value;
     break;
@@ -106,25 +105,28 @@ void GPU::writeData(WORD address, BYTE value) {
   case 0xFF6B: // OCPD (Object Palette Data)
     updateCGBPalette(objPalettes, OCPS, value);
     break;
-  default:
-    break; // Ignore other writes
   }
 }
 
 BYTE GPU::readData(WORD address) const {
-  // TODO: Handle CGB mode
-
-  // Handle VRAM and OAM reads
+  // Handle VRAM reads
   if (address >= 0x8000 && address < 0xA000) {
-    return VRAM[(address & 0x1FFF) | (VRAMBank << 13)]; // Read from VRAM
-  } else if (address >= 0xFE00 && address < 0xFEA0) {
-    return OAM[address & 0xFF]; // Read from OAM
+    // Get the offset in the current VRAM bank
+    WORD offset = address & 0x1FFF;
+
+    // Apply VRAM bank selection for CGB mode
+    if (CGB && VRAMBank == 1) {
+      offset += 0x2000; // Add 8KB offset for bank 1
+    }
+
+    return VRAM[offset];
   }
-  // CGB VRAM bank
-  else if (address == 0xFF4F) {
-    return VRAMBank; // Read the VRAM bank
+  // Handle OAM reads
+  else if (address >= 0xFE00 && address < 0xFEA0) {
+    return OAM[address & 0xFF];
   }
 
+  // Handle GPU registers
   switch (address) {
   case 0xFF40: // LCDC
     return LCDC;
@@ -148,22 +150,23 @@ BYTE GPU::readData(WORD address) const {
     return WY;
   case 0xFF4B: // WX
     return WX;
-  case 0xFF68: // BCPS (Background Palette Index)
+  case 0xFF4F: // VRAM Bank (CGB only)
+    return VRAMBank;
+  case 0xFF68: // BCPS
     return BCPS;
-  case 0xFF69:                             // BCPD (Background Palette Data)
-    return bgPalettes[BCPS / 8][BCPS % 4]; // Read the palette data
-  case 0xFF6A:                             // OCPS (Object Palette Index)
+  case 0xFF69: // BCPD
+    return bgPalettes[(BCPS & 0x3F) / 8][(BCPS & 0x3F) % 8 / 2];
+  case 0xFF6A: // OCPS
     return OCPS;
-  case 0xFF6B:                              // OCPD (Object Palette Data)
-    return objPalettes[OCPS / 8][OCPS % 4]; // Read the palette data
-  case 0xFF4F:                              // VRAM Bank
-    return VRAMBank;                        // Read the VRAM bank
+  case 0xFF6B: // OCPD
+    return objPalettes[(OCPS & 0x3F) / 8][(OCPS & 0x3F) % 8 / 2];
   default:
-    return 0; // Ignore other reads
+    return 0xFF;
   }
 }
 
-void GPU::updateGPU(WORD cycles) {
+void GPU::updateGPU(int cycles) {
+  // TODO: Check the cycle are correct
   cycleCount += cycles;
   while (cycleCount > 0) {
     switch (STAT & 0x03) {
@@ -201,6 +204,7 @@ void GPU::updateGPU(WORD cycles) {
 
       if (LY > 153) { // End of VBlank
         LY = 0;
+        windowLine = 0; // Reset window line
         // Check for OAM interrupt
         if (STAT & 0x02) {
           interrupts->setLCDStatFlag(true);
@@ -317,6 +321,26 @@ void GPU::findSprites() {
   }
 }
 
+void GPU::renderFrame(SDL_Renderer *ren) {
+  // Gameboy screen: 160x144
+  // Necessary surfaces
+  // SDL_Surface *mainSurface = SDL_CreateRGBSurface(0, 256, 256, 32, 0, 0, 0,
+  // 0);
+  SDL_Surface *mainSurface = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
+
+  // Copy background surface to the main surface
+  SDL_BlitSurface(backgroundGlobal, NULL, mainSurface, NULL);
+
+  // Render main surface
+  SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, mainSurface);
+  SDL_FreeSurface(mainSurface);
+  SDL_RenderClear(ren);
+  SDL_RenderCopy(ren, tex, NULL, NULL);
+  SDL_RenderPresent(ren);
+
+  SDL_DestroyTexture(tex);
+}
+
 void GPU::renderScanline() {
   // Check if the LCD is enabled
   if (!(LCDC & 0x80)) {
@@ -333,7 +357,16 @@ void GPU::renderScanline() {
   }
   // Render sprites on the line
   if (LCDC & 0x02) {
-    // TODO: Implement sprite rendering
+    renderSprites();
+  }
+
+  // Declare BG pixels pointer/array
+  uint32_t *globalBGPixels = (uint32_t *)backgroundGlobal->pixels;
+
+  for (int i = 0; i < 160; i++) {
+    int pixelData = lineBuffer[i];
+    globalBGPixels[i + (LY * backgroundGlobal->w)] = pixelData;
+    lineBuffer[i] = 0;
   }
 }
 
@@ -345,19 +378,20 @@ void GPU::renderBG() {
       x = 0; // Wrap around X scroll
     }
     int tileIndex = ((y / 8) * 32) + (x / 8); // Calculate tile index
-    BYTE mapLocation =
-        ((LCDC & 0x40) ? 0x1C00 : 0x1800) + tileIndex; // Map location
-    BYTE tileLocation = VRAM[mapLocation];             // Tile map content
-    BYTE mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
+    WORD mapLocation =
+        ((LCDC & 0x08) ? 0x1C00 : 0x1800) + tileIndex; // Map location
+    WORD tileLocation = VRAM[mapLocation];             // Tile map content
+    WORD mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
     // 0x8000 method
     if (LCDC & 0x10) {
       tileLocation <<= 4; // Shift since each tile is 16 bytes
     }
     // 0x8800 method
     else {
-      tileLocation = (128 + (int16_t)tileLocation) & 0xFF; // Convert to signed
-      tileLocation =
-          0x800 + (tileLocation << 4); // Shift since each tile is 16 bytes
+      // Proper signed conversion
+      int16_t signedTile = static_cast<int16_t>(tileLocation);
+      tileLocation = static_cast<WORD>(signedTile);
+      tileLocation = 0x800 + (tileLocation << 4);
     }
 
     // Get pixels
@@ -417,19 +451,20 @@ void GPU::renderWindow() {
       x = 0; // Wrap around X scroll
     }
     int tileIndex = ((y / 8) * 32) + (x / 8); // Calculate tile index
-    BYTE mapLocation =
-        ((LCDC & 0x08) ? 0x1C00 : 0x1800) + tileIndex; // Map location
-    BYTE tileLocation = VRAM[mapLocation];             // Tile map content
-    BYTE mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
+    WORD mapLocation =
+        ((LCDC & 0x40) ? 0x1C00 : 0x1800) + tileIndex; // Map location
+    WORD tileLocation = VRAM[mapLocation];             // Tile map content
+    WORD mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
     // 0x8000 method
     if (LCDC & 0x10) {
       tileLocation <<= 4; // Shift since each tile is 16 bytes
     }
     // 0x8800 method
     else {
-      tileLocation = (128 + (int16_t)tileLocation) & 0xFF; // Convert to signed
-      tileLocation =
-          0x800 + (tileLocation << 4); // Shift since each tile is 16 bytes
+      // Proper signed conversion
+      int16_t signedTile = static_cast<int16_t>(tileLocation);
+      tileLocation = static_cast<WORD>(signedTile);
+      tileLocation = 0x800 + (tileLocation << 4);
     }
 
     // Get pixels
@@ -467,4 +502,93 @@ void GPU::renderWindow() {
   }
 }
 
-void GPU::renderSprites() {}
+void GPU::renderSprites() {
+  BYTE spriteHeight =
+      (LCDC & 0x04) ? 16 : 8; // Check if large sprites are enabled
+
+  // Sort visible sprites based on priority
+  std::sort(visiableSprites, visiableSprites + spriteCount,
+            [this](int a, int b) {
+              BYTE xA = OAM[a * 4 + 1]; // X coordinate of sprite A
+              BYTE xB = OAM[b * 4 + 1]; // X coordinate of sprite B
+              if (CGB) {
+                // In CGB mode, priority is determined by OAM order
+                return a < b;
+              } else {
+                // In non-CGB mode, smaller X has higher priority; if equal,
+                // earlier OAM index wins
+                return (xA < xB) || (xA == xB && a < b);
+              }
+            });
+
+  // Render sprites
+  for (int i = 0; i < spriteCount; i++) {
+    BYTE spriteIndex = visiableSprites[i];
+    BYTE spriteY = OAM[spriteIndex * 4];        // Y coordinate
+    BYTE spriteX = OAM[spriteIndex * 4 + 1];    // X coordinate
+    BYTE tileIndex = OAM[spriteIndex * 4 + 2];  // Tile index
+    BYTE attributes = OAM[spriteIndex * 4 + 3]; // Attributes
+
+    BYTE pixelY = (attributes & 0x40) ? (spriteHeight - 1) - (LY - spriteY)
+                                      : LY - spriteY; // Flip Y if needed
+
+    // Re-adjust the tile index for tall sprites
+    if (spriteHeight == 16) {
+      if (pixelY < 8) {
+        tileIndex &= 0xFE;
+      } else {
+        tileIndex |= 0x1;
+      }
+      pixelY = pixelY & 0x7; // Mask the value if it's tall
+    }
+
+    uint16_t tilePointer = tileIndex << 4;
+    // VRAM bank
+    if (CGB && (attributes & 0x8) == 0x8) {
+      tilePointer |= 0x2000;
+    }
+
+    uint8_t lowerByte = VRAM[tilePointer + (2 * pixelY)];
+    uint8_t upperByte = VRAM[tilePointer + (2 * pixelY) + 1];
+
+    // Render the sprite pixels
+    for (int x = 0; x < 8; x++) {
+      int pixelX = (attributes & 0x20) ? (7 - x) : x; // Flip X if needed
+      int screenX = spriteX - 8 + pixelX;
+
+      if (screenX < 0 || screenX >= 160) {
+        continue; // Skip pixels outside the screen
+      }
+
+      int pixelData = ((lowerByte >> (7 - x)) & 0x01) |
+                      (((upperByte >> (7 - x)) & 0x01) << 1);
+
+      if (pixelData == 0) {
+        continue; // Skip transparent pixels
+      }
+
+      // Handle priority and overwrite conditions
+      if (CGB) {
+        // In CGB mode, check background priority
+        if (bgPriorties[screenX] && (attributes & 0x80)) {
+          continue; // Skip if background has priority
+        }
+      } else {
+        // In non-CGB mode, skip if background has priority and OBJ-to-BG
+        // priority is set
+        if (bgPriorties[screenX] && (attributes & 0x80)) {
+          continue;
+        }
+      }
+
+      // Apply the palette
+      if (CGB) {
+        lineBuffer[screenX] =
+            cgbToARGB(objPalettes[attributes & 0x07][pixelData]);
+      } else {
+        lineBuffer[screenX] =
+            getDMGColor(pixelData, (attributes & 0x10) ? OBP1 : OBP0);
+      }
+    }
+  }
+}
