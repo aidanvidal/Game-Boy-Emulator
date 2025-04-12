@@ -15,7 +15,7 @@ APU_OBJS = $(APU_SRCS:%.cpp=$(BUILD_DIR)/%.o)
 
 # Graphics Component (placeholder for future use)
 GRAPHICS_TARGET = graphics
-GRAPHICS_SRCS = graphics/main.cpp graphics/graphics.cpp
+GRAPHICS_SRCS = GPU.cpp Interrupts.cpp testGPU.cpp
 GRAPHICS_OBJS = $(GRAPHICS_SRCS:%.cpp=$(BUILD_DIR)/%.o)
 
 # GameBoy Component (placeholder for future use)
