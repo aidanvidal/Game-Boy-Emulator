@@ -29,6 +29,9 @@ GPU::GPU(Interrupts *interrupts, bool CGB)
       objPalettes[i][j] = 0x7FFF;
     }
   }
+  BCPS = 0x00; // Background Palette Specification
+  OCPS = 0x00; // Object Palette Specification
+  backgroundGlobal = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
 }
 GPU::~GPU() {
   // Destructor
@@ -251,7 +254,7 @@ void GPU::checkLYC() {
   }
 }
 
-void GPU::updateCGBPalette(uint16_t (&palettes)[8][4], BYTE index_reg,
+void GPU::updateCGBPalette(uint16_t (&palettes)[8][4], BYTE &index_reg,
                            BYTE data) {
   bool auto_increment = index_reg & 0x80;
   uint8_t index = index_reg & 0x3F; // Lower 6 bits
@@ -548,8 +551,8 @@ void GPU::renderSprites() {
       tilePointer |= 0x2000;
     }
 
-    uint8_t lowerByte = VRAM[tilePointer + (2 * pixelY)];
-    uint8_t upperByte = VRAM[tilePointer + (2 * pixelY) + 1];
+    BYTE lowerByte = VRAM[tilePointer + (2 * (pixelY % 8))];
+    BYTE upperByte = VRAM[tilePointer + (2 * (pixelY % 8)) + 1];
 
     // Render the sprite pixels
     for (int x = 0; x < 8; x++) {
@@ -570,13 +573,13 @@ void GPU::renderSprites() {
       // Handle priority and overwrite conditions
       if (CGB) {
         // In CGB mode, check background priority
-        if (bgPriorties[screenX] && (attributes & 0x80)) {
+        if (bgPriorties[screenX] || (attributes & 0x80)) {
           continue; // Skip if background has priority
         }
       } else {
         // In non-CGB mode, skip if background has priority and OBJ-to-BG
         // priority is set
-        if (bgPriorties[screenX] && (attributes & 0x80)) {
+        if (attributes & 0x80) {
           continue;
         }
       }

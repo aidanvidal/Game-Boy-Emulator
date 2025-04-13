@@ -54,8 +54,7 @@ private:
   uint16_t bgPalettes[8][4];  // 8 BG palettes, 4 colors each (RGB555)
   uint16_t objPalettes[8][4]; // 8 OBJ palettes, 4 colors each (RGB555)
   bool bgPriorties[160];      // Background priorities for each pixel
-  SDL_Surface *backgroundGlobal =
-      SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
+  SDL_Surface *backgroundGlobal; // Global background surface
 
   // Helper functions
   void checkLYC();       // Check the LY Compare register
@@ -64,7 +63,7 @@ private:
   void renderBG();       // Render the background for the current line
   void renderWindow();   // Render the window for the current line
   void renderSprites();  // Render the sprites for the current line
-  void updateCGBPalette(uint16_t (&palettes)[8][4], BYTE index_reg, BYTE data);
+  void updateCGBPalette(uint16_t (&palettes)[8][4], BYTE &index_reg, BYTE data);
   uint32_t getDMGColor(uint8_t color_idx, BYTE palette);
   uint32_t cgbToARGB(uint16_t rgb555); // Convert RGB555 to ARGB8888
 
