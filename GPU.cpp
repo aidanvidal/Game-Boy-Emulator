@@ -537,7 +537,7 @@ void GPU::renderSprites() {
 
     // Re-adjust the tile index for tall sprites
     if (spriteHeight == 16) {
-      if (pixelY < 8) {
+      if (pixelY % 16 < 8) {
         tileIndex &= 0xFE;
       } else {
         tileIndex |= 0x1;
@@ -547,7 +547,7 @@ void GPU::renderSprites() {
 
     uint16_t tilePointer = tileIndex << 4;
     // VRAM bank
-    if (CGB && (attributes & 0x8) == 0x8) {
+    if (CGB && (attributes & 0x8)) {
       tilePointer |= 0x2000;
     }
 
