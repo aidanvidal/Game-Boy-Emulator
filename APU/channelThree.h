@@ -84,8 +84,8 @@ public:
   // Wave Pattern RAM operations
   void setNibbleWavePatternRAM(int index, BYTE value, bool upper);
   BYTE getNibbleWavePatternRAM(int index, bool upper) const;
-  void setWavePatternRAM(int index, BYTE value);
-  BYTE getWavePatternRAM(int index) const;
+  void setWavePatternRAM(WORD address, BYTE value);
+  BYTE getWavePatternRAM(WORD address) const;
   void updateSampleTimer(int cycles);
 };
 

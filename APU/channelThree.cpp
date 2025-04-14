@@ -222,12 +222,12 @@ BYTE ChannelThree::getNibbleWavePatternRAM(int index, bool upper) const {
   }
 }
 // Set the wave pattern RAM at the specified index
-void ChannelThree::setWavePatternRAM(int index, BYTE value) {
-  wavePatternRAM[index] = value;
+void ChannelThree::setWavePatternRAM(WORD address, BYTE value) {
+  wavePatternRAM[address & 0xF] = value;
 }
 // Get the wave pattern RAM at the specified index
-BYTE ChannelThree::getWavePatternRAM(int index) const {
-  return wavePatternRAM[index];
+BYTE ChannelThree::getWavePatternRAM(WORD address) const {
+  return wavePatternRAM[address & 0xF];
 }
 // Update the sample timer
 void ChannelThree::updateSampleTimer(int cycles) {

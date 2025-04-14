@@ -366,7 +366,11 @@ void APU::writeData(WORD address, BYTE value) {
     break; // NR52
 
   default:
-    break; // Invalid address
+    // Wave RAM (0xFF30 - 0xFF3F)
+    if (address >= 0xFF30 && address <= 0xFF3F) {
+      channelThree.setWavePatternRAM(address, value);
+    }
+    break;
   }
 }
 
@@ -425,7 +429,11 @@ BYTE APU::getData(WORD address) const {
     return NR52; // NR52
 
   default:
-    return 0xFF; // Invalid address, return default value
+    // Wave RAM (0xFF30 - 0xFF3F)
+    if (address >= 0xFF30 && address <= 0xFF3F) {
+      return channelThree.getWavePatternRAM(address);
+    }
+    break;
   }
 }
 

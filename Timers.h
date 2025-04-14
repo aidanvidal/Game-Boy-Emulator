@@ -22,7 +22,7 @@ private:
     // TODO: Add interrupt member variable
     Interrupts* interrupts; // Interrupts object to handle interrupts
 public:
-    Timers(Interrupts &interrupts); // Constructor
+    Timers(Interrupts *interrupts); // Constructor
 
     void resetTimers(); // Reset the timer registers
     void writeData(WORD address, BYTE value); // Write data to the timer registers
