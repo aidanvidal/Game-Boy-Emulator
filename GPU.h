@@ -12,9 +12,10 @@ typedef uint16_t WORD;
 
 class GPU {
 private:
-  // TODO: Add CGB support
-  // add DMA register for OAM transfer in the future (probably in the memory
-  // class)
+  // TODO:
+  // add DMA register for OAM transfer in the future, probably in the memory
+  // HDAM registers for VRAM DMA transfer, either in the GPU or in the memory
+  // Need WRAM and WRAM bank registers for CGB mode
 
   Interrupts *interrupts; // Interrupts object to handle interrupts
 

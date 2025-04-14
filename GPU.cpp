@@ -169,7 +169,7 @@ BYTE GPU::readData(WORD address) const {
 }
 
 void GPU::updateGPU(int cycles) {
-  // TODO: Check the cycle are correct
+  // TODO: Check if the cycle logic is correct when testing
   cycleCount += cycles;
   while (cycleCount > 0) {
     switch (STAT & 0x03) {
@@ -311,7 +311,9 @@ void GPU::findSprites() {
                 // sprites
     }
     uint8_t spriteHeight = largeSprite ? 16 : 8; // Determine sprite height
-    int topY = spriteY - 16;           // Adjust Y coordinate for sprite height
+    // Adjust Y coordinate for sprite height
+    // Minus 16 since the sprite Y is offseted by 16
+    int topY = spriteY - 16;
     int bottomY = topY + spriteHeight; // Calculate bottom Y coordinate
     // Check if the sprite is within the current line
     if (LY >= topY && LY < bottomY) {
@@ -326,9 +328,6 @@ void GPU::findSprites() {
 
 void GPU::renderFrame(SDL_Renderer *ren) {
   // Gameboy screen: 160x144
-  // Necessary surfaces
-  // SDL_Surface *mainSurface = SDL_CreateRGBSurface(0, 256, 256, 32, 0, 0, 0,
-  // 0);
   SDL_Surface *mainSurface = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
 
   // Copy background surface to the main surface
@@ -368,23 +367,26 @@ void GPU::renderScanline() {
 
   for (int i = 0; i < 160; i++) {
     int pixelData = lineBuffer[i];
+    // Write the pixel data to the global background surface
     globalBGPixels[i + (LY * backgroundGlobal->w)] = pixelData;
     lineBuffer[i] = 0;
   }
 }
 
 void GPU::renderBG() {
-  int x = SCX;      // X scroll
-  int y = SCY + LY; // Y scroll
+  int x = SCX;              // X scroll
+  int y = (SCY + LY) % 256; // Y scroll (wrap around)
   for (int i = 0; i < 160; i++, x++) {
     if (x >= 256) {
       x = 0; // Wrap around X scroll
     }
-    int tileIndex = ((y / 8) * 32) + (x / 8); // Calculate tile index
+    // Calculate tile index
+    // Each tile is 8x8 pixels, so we divide the coordinates by 8
+    int tileIndex = ((y / 8) * 32) + (x / 8);
     WORD mapLocation =
         ((LCDC & 0x08) ? 0x1C00 : 0x1800) + tileIndex; // Map location
-    WORD tileLocation = VRAM[mapLocation];             // Tile map content
-    WORD mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
+    BYTE tileLocation = VRAM[mapLocation];             // Tile map content
+    BYTE mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
     // 0x8000 method
     if (LCDC & 0x10) {
       tileLocation <<= 4; // Shift since each tile is 16 bytes
@@ -392,12 +394,13 @@ void GPU::renderBG() {
     // 0x8800 method
     else {
       // Proper signed conversion
-      int16_t signedTile = static_cast<int16_t>(tileLocation);
-      tileLocation = static_cast<WORD>(signedTile);
+      int8_t signedTile = static_cast<int8_t>(tileLocation);
+      tileLocation = static_cast<BYTE>(signedTile);
       tileLocation = 0x800 + (tileLocation << 4);
     }
 
     // Get pixels
+    // Modulo 8 to get the pixel coordinates within the tile
     int pixelX = (x % 8); // Pixel X coordinate
     int pixelY = (y % 8); // Pixel Y coordinate
 
@@ -456,8 +459,8 @@ void GPU::renderWindow() {
     int tileIndex = ((y / 8) * 32) + (x / 8); // Calculate tile index
     WORD mapLocation =
         ((LCDC & 0x40) ? 0x1C00 : 0x1800) + tileIndex; // Map location
-    WORD tileLocation = VRAM[mapLocation];             // Tile map content
-    WORD mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
+    BYTE tileLocation = VRAM[mapLocation];             // Tile map content
+    BYTE mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
     // 0x8000 method
     if (LCDC & 0x10) {
       tileLocation <<= 4; // Shift since each tile is 16 bytes
@@ -465,8 +468,8 @@ void GPU::renderWindow() {
     // 0x8800 method
     else {
       // Proper signed conversion
-      int16_t signedTile = static_cast<int16_t>(tileLocation);
-      tileLocation = static_cast<WORD>(signedTile);
+      int8_t signedTile = static_cast<int8_t>(tileLocation);
+      tileLocation = static_cast<BYTE>(signedTile);
       tileLocation = 0x800 + (tileLocation << 4);
     }
 
@@ -537,15 +540,18 @@ void GPU::renderSprites() {
 
     // Re-adjust the tile index for tall sprites
     if (spriteHeight == 16) {
+      // Modulo 16 to get where the pixel is in the tile
       if (pixelY % 16 < 8) {
         tileIndex &= 0xFE;
       } else {
         tileIndex |= 0x1;
       }
-      pixelY = pixelY & 0x7; // Mask the value if it's tall
     }
 
+    // Calculate the tile pointer
+    // Each tile is 16 bytes, so we multiply the tile index by 16
     uint16_t tilePointer = tileIndex << 4;
+
     // VRAM bank
     if (CGB && (attributes & 0x8)) {
       tilePointer |= 0x2000;
@@ -572,13 +578,13 @@ void GPU::renderSprites() {
 
       // Handle priority and overwrite conditions
       if (CGB) {
-        // In CGB mode, check background priority
+        // In CGB mode, skip if background has priority in the sprite attributes
+        // or if the background has priority in the map attributes
         if (bgPriorties[screenX] || (attributes & 0x80)) {
-          continue; // Skip if background has priority
+          continue;
         }
       } else {
-        // In non-CGB mode, skip if background has priority and OBJ-to-BG
-        // priority is set
+        // In non-CGB mode, skip if background has priority in sprite atributes
         if (attributes & 0x80) {
           continue;
         }
