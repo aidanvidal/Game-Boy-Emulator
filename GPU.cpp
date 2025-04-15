@@ -1,9 +1,11 @@
 #include "GPU.h"
+#include "Memory.h"
 #include <cstdint>
 #include <iostream>
 
-GPU::GPU(Interrupts *interrupts, bool CGB)
-    : interrupts(interrupts), cycleCount(0), CGB(CGB), vBlank(false) {
+GPU::GPU(Interrupts *interrupts, bool CGB, Memory *memory)
+    : interrupts(interrupts), cycleCount(0), CGB(CGB), vBlank(false),
+      memory(memory) {
   // Initialize GPU registers
   LCDC = 0x91;
   LY = 0x00;
@@ -238,6 +240,12 @@ void GPU::updateGPU(int cycles) {
       if (STAT & 0x08) {
         interrupts->setLCDStatFlag(true);
       }
+
+      // Do HDMA transfer if needed
+      if (HDMALength > 0 && HDMAActive) {
+        doHDMATransfer();
+      }
+
       break;
     }
   }
@@ -599,5 +607,28 @@ void GPU::renderSprites() {
             getDMGColor(pixelData, (attributes & 0x10) ? OBP1 : OBP0);
       }
     }
+  }
+}
+
+void GPU::setHDMA(BYTE len, WORD source, WORD dest, bool active) {
+  if (!active) {
+    HDMAActive = false;
+    return;
+  }
+  HDMAActive = true;
+  HDMALength = len;
+  HDMASource = source;
+  HDMADest = dest;
+}
+
+void GPU::doHDMATransfer() {
+  // Get data from memory based on source
+  // and write to destination, do only one transfer
+  writeData(HDMADest, memory->readData(HDMASource));
+  HDMASource++;
+  HDMADest++;
+  HDMALength--;
+  if (HDMALength == 0) {
+    HDMAActive = false; // Stop the transfer
   }
 }

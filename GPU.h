@@ -10,6 +10,9 @@
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
 
+// Forward declaration
+class Memory;
+
 class GPU {
 private:
   // TODO:
@@ -18,6 +21,7 @@ private:
   // Need WRAM and WRAM bank registers for CGB mode
 
   Interrupts *interrupts; // Interrupts object to handle interrupts
+  Memory *memory;         // Memory object to access memory
 
   // Memory For GPU
   // Link for VRAM info:
@@ -52,10 +56,16 @@ private:
   BYTE OCPS;     // Object Palette Specification CGB
   BYTE VRAMBank; // VRAM Bank CGB
 
-  uint16_t bgPalettes[8][4];  // 8 BG palettes, 4 colors each (RGB555)
-  uint16_t objPalettes[8][4]; // 8 OBJ palettes, 4 colors each (RGB555)
-  bool bgPriorties[160];      // Background priorities for each pixel
+  uint16_t bgPalettes[8][4];     // 8 BG palettes, 4 colors each (RGB555)
+  uint16_t objPalettes[8][4];    // 8 OBJ palettes, 4 colors each (RGB555)
+  bool bgPriorties[160];         // Background priorities for each pixel
   SDL_Surface *backgroundGlobal; // Global background surface
+
+  // HDMA length for VRAM transfer
+  BYTE HDMALength; // Length of the transfer
+  WORD HDMASource; // Source address for the transfer
+  WORD HDMADest;   // Destination address for the transfer
+  bool HDMAActive; // Flag to indicate if HDMA is active
 
   // Helper functions
   void checkLYC();       // Check the LY Compare register
@@ -67,14 +77,19 @@ private:
   void updateCGBPalette(uint16_t (&palettes)[8][4], BYTE &index_reg, BYTE data);
   uint32_t getDMGColor(uint8_t color_idx, BYTE palette);
   uint32_t cgbToARGB(uint16_t rgb555); // Convert RGB555 to ARGB8888
+  void doHDMATransfer();
 
 public:
-  GPU(Interrupts *interrupts, bool CGB = false); // Constructor
+  GPU(Interrupts *interrupts, bool CGB = false,
+      Memory *memory = nullptr); // Constructor
   ~GPU();
   void writeData(WORD address, BYTE value); // Write data to the GPU registers
   BYTE readData(WORD address) const;        // Read data from the GPU registers
   void updateGPU(int cycles);               // Update the GPU timers
   void renderFrame(SDL_Renderer *ren);      // Render the frame
+  void setHDMA(BYTE len, WORD source, WORD dest,
+               bool active);                        // Set the HDMA
+  BYTE getHDMALength() const { return HDMALength; } // Get the HDMA length
   bool vBlank; // Flag to indicate if the screen is blank
 };
 

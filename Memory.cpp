@@ -1,5 +1,5 @@
 #include "Memory.h"
-#include "APU/APU.h"
+#include <cstdint>
 
 Memory::Memory(const char *filename) {
   // Load game cartridge
@@ -12,7 +12,7 @@ Memory::Memory(const char *filename) {
   interrupts = new Interrupts();
 
   // Initialize the GPU
-  gpu = new GPU(interrupts, CBG);
+  gpu = new GPU(interrupts, CBG, this);
 
   // Initialize the WRAM
   wram = new WRAM();
@@ -96,7 +96,8 @@ void Memory::writeData(WORD address, BYTE data) {
   // GPU
   if (address >= 0xFF40 && address <= 0xFF4B) {
     if (address == 0xFF46) {
-      OAMDMATransfer(data); // OAM DMA transfer
+      OAMDMA = data;    // Set OAM DMA register
+      OAMDMATransfer(); // OAM DMA transfer
     } else {
       gpu->writeData(address, data); // Write to GPU
     }
@@ -123,7 +124,24 @@ void Memory::writeData(WORD address, BYTE data) {
   }
   // VRAM DMA
   if (address >= 0xFF51 && address <= 0xFF55) {
-    // TODO: Handle VRAM DMA
+    switch (address) {
+    case 0xFF51: // HDMA1
+      HDMA1 = data;
+      break;
+    case 0xFF52: // HDMA2
+      HDMA2 = data;
+      break;
+    case 0xFF53: // HDMA3
+      HDMA3 = data;
+      break;
+    case 0xFF54: // HDMA4
+      HDMA4 = data;
+      break;
+    case 0xFF55: // HDMA5
+      HDMA5 = data;
+      VRAMDMATransfer();
+      break;
+    }
     return;
   }
   // Palettes
@@ -144,9 +162,25 @@ void Memory::writeData(WORD address, BYTE data) {
   }
 }
 
-void Memory::OAMDMATransfer(BYTE source) {
-  uint16_t readSource = source << 8; // Destination address in OAM
+void Memory::OAMDMATransfer() {
+  uint16_t readSource = OAMDMA << 8; // Destination address in OAM
   for (int i = 0; i < 0xA0; i++) {
     gpu->writeData(0xFE00 + i, readData(readSource + i));
+  }
+}
+
+void Memory::VRAMDMATransfer() {
+  uint16_t readSource = HDMA1 << 8 | (HDMA2 & 0xF0); // Source address
+  uint16_t writeDest = HDMA3 << 8 | (HDMA4 & 0xF0);  // Destination address
+  uint16_t length = (HDMA5 & 0x7F) + 1;              // Length of transfer
+  // If bit 7 = 1, HBlank DMA, bit 7 = 0 General purpose DMA
+  bool hblank = (HDMA5 & 0x80) != 0;
+  gpu->setHDMA(length, readSource, writeDest, hblank); // Set HDMA
+  if (!hblank) {
+    // Preform the general purpose DMA transfer
+    for (int i = 0; i < length; i++) {
+      gpu->writeData(writeDest + i, readData(readSource + i));
+    }
+    HDMA5 = 0; // Clear the HDMA5 register
   }
 }

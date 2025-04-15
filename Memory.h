@@ -25,8 +25,18 @@ private:
   bool CBG;               // CGB mode flag
   bool bootROM;           // Boot ROM flag
   BYTE key1;              // Key1 register (CGB only) used for double speed mode
+
+  // DMA Transfer Registers
+  BYTE OAMDMA; // OAM DMA register
+  // VRAM DMA registers
+  BYTE HDMA1;
+  BYTE HDMA2;
+  BYTE HDMA3;
+  BYTE HDMA4;
+  BYTE HDMA5;
   // Helper functions
-  void OAMDMATransfer(BYTE source); // OAM DMA transfer
+  void OAMDMATransfer(); // OAM DMA transfer
+  void VRAMDMATransfer(); // VRAM DMA transfer
 
 public:
   Memory(const char *filename); // Constructor
