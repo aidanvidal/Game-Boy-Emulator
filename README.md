@@ -24,10 +24,10 @@ make emulator
 -   Cartridge things
 -   Serial Data Transfer
 -   Finish Interrurpts
--   VRAM DMA transfer
 -   A lot of instructions
 -   Combine parts into Memory class
 -   Create final cycle accurate Game Boy CPU loop
+-   Test and debug
 
 ## Extra Info
 
