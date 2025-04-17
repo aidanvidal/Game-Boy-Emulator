@@ -23,6 +23,9 @@ Memory::Memory(const char *filename) {
   // Initialize the Timers
   timers = new Timers(interrupts);
 
+  // Initialize the Input
+  input = new Input();
+
   // Initialize the high RAM
   for (int i = 0; i < 0x80; i++) {
     highRAM[i] = 0; // Initialize high RAM with zeros
@@ -39,6 +42,7 @@ Memory::~Memory() {
   delete wram;
   delete apu;
   delete timers;
+  delete input;
 }
 
 void Memory::writeData(WORD address, BYTE data) {
@@ -67,7 +71,7 @@ void Memory::writeData(WORD address, BYTE data) {
   // I/O Ports
   // Joypad
   if (address == 0xFF00) {
-    // TODO: Handle joypad input
+    input->updateJoypadState(data); // Update joypad state
     return;
   }
   // Serial Transfer

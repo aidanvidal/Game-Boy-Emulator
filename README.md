@@ -20,7 +20,6 @@ make emulator
 ```
 
 ## TODO:
--   Joypad Input
 -   Cartridge things
 -   Serial Data Transfer
 -   Finish Interrurpts

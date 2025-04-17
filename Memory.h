@@ -6,6 +6,7 @@
 #include "Interrupts.h"
 #include "Timers.h"
 #include "WRAM.h"
+#include "Input.h"
 #include <cstdint>
 
 typedef uint8_t BYTE;
@@ -22,6 +23,7 @@ private:
   Interrupts *interrupts; // Interrupts object
   APU *apu;               // APU object
   Timers *timers;         // Timers object
+  Input *input;           // Input object
   bool CBG;               // CGB mode flag
   bool bootROM;           // Boot ROM flag
   BYTE key1;              // Key1 register (CGB only) used for double speed mode
