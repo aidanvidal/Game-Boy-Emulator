@@ -24,7 +24,7 @@ Memory::Memory(const char *filename) {
   timers = new Timers(interrupts);
 
   // Initialize the Input
-  input = new Input();
+  input = new Input(interrupts);
 
   // Initialize the high RAM
   for (int i = 0; i < 0x80; i++) {
