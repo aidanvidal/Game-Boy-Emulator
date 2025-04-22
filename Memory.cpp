@@ -1,4 +1,5 @@
 #include "Memory.h"
+#include "Cartridges/NoMBC.h"
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -39,12 +40,13 @@ Memory::Memory(const std::string filename) {
 
 Memory::~Memory() {
   // Destructor
-  delete interrupts;
-  delete gpu;
-  delete wram;
-  delete apu;
-  delete timers;
-  delete input;
+  free(interrupts);
+  free(gpu);
+  free(wram);
+  free(apu);
+  free(timers);
+  free(input);
+  free(cartridge);
 }
 
 void Memory::writeData(WORD address, BYTE data) {
@@ -246,8 +248,8 @@ void Memory::loadCartridge(const std::string filename) {
   BYTE ramSizeFlag =
       romData[0x0149]; // Read the RAM size flag from the ROM header
   // RAM size values
-  // The 0x800 is there because apparently the 1 slot was "Listed in various unofficial docs as 2 KiB"
-  // but officially it is listed as unused.
+  // The 0x800 is there because apparently the 1 slot was "Listed in various
+  // unofficial docs as 2 KiB" but officially it is listed as unused.
   int ramSizes[6] = {0, 0x800, 0x2000, 0x8000, 0x20000, 0x80000};
   int ramSizeValue = 0;
   switch (ramSizeFlag) {
@@ -278,7 +280,8 @@ void Memory::loadCartridge(const std::string filename) {
   } else {
     std::cout << "Invalid RAM Size" << std::endl;
   }
-  ramSizeValue = ramSizes[ramSizeFlag]; // Set the actual RAM size value in Bytes
+  ramSizeValue =
+      ramSizes[ramSizeFlag]; // Set the actual RAM size value in Bytes
 
   // Battery Things
   std::string batteryPath = filename;
@@ -290,8 +293,8 @@ void Memory::loadCartridge(const std::string filename) {
 
   // Switch case for MBC type
   switch (mbcType) {
-  case 0x00: // No MBC
-    // TODO: Handle no MBC
+  case 0x00:                                 // No MBC
+    cartridge = new NoMBC(romData, romSize); // Create NoMBC object
     std::cout << "No MBC" << std::endl;
     break;
   case 0x01: // MBC1

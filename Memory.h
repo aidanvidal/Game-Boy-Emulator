@@ -2,15 +2,17 @@
 #define MEMORY_H
 
 #include "APU/APU.h"
+#include "Cartridge/Cartridge.h"
+#include "Cartridges/Cartridge.h"
 #include "GPU.h"
+#include "Input.h"
 #include "Interrupts.h"
 #include "Timers.h"
 #include "WRAM.h"
-#include "Input.h"
 #include <cstdint>
-#include <string>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <string>
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -19,7 +21,7 @@ typedef uint32_t DWORD;
 class Memory {
 private:
   // Memory map
-  // TODO: Added MBC memory map and cartridge logic
+  Cartridge *cartridge;   // Pointer to the cartridge
   BYTE highRAM[0x7F];     // High RAM (0xFF80 - 0xFFFF)
   WRAM *wram;             // WRAM object
   GPU *gpu;               // GPU object
@@ -40,16 +42,16 @@ private:
   BYTE HDMA4;
   BYTE HDMA5;
   // Helper functions
-  void OAMDMATransfer(); // OAM DMA transfer
+  void OAMDMATransfer();  // OAM DMA transfer
   void VRAMDMATransfer(); // VRAM DMA transfer
 
 public:
   Memory(const std::string filename); // Constructor
-  ~Memory();                    // Destructor
+  ~Memory();                          // Destructor
 
   // Read and write functions
-  BYTE readData(WORD address) const;        // Read data from memory
-  void writeData(WORD address, BYTE value); // Write data to memory
+  BYTE readData(WORD address) const;              // Read data from memory
+  void writeData(WORD address, BYTE value);       // Write data to memory
   void loadCartridge(const std::string filename); // Load cartridge data
 };
 #endif
