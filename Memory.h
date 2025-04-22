@@ -8,6 +8,9 @@
 #include "WRAM.h"
 #include "Input.h"
 #include <cstdint>
+#include <string>
+#include <iostream>
+#include <fstream>
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -41,13 +44,12 @@ private:
   void VRAMDMATransfer(); // VRAM DMA transfer
 
 public:
-  Memory(const char *filename); // Constructor
+  Memory(const std::string filename); // Constructor
   ~Memory();                    // Destructor
 
   // Read and write functions
   BYTE readData(WORD address) const;        // Read data from memory
   void writeData(WORD address, BYTE value); // Write data to memory
-  void loadCartridge(const char *filename); // Load cartridge data
-  void saveCartridge(const char *filename); // Save cartridge data
+  void loadCartridge(const std::string filename); // Load cartridge data
 };
 #endif

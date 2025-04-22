@@ -1,7 +1,9 @@
 #include "Memory.h"
 #include <cstdint>
+#include <fstream>
+#include <iostream>
 
-Memory::Memory(const char *filename) {
+Memory::Memory(const std::string filename) {
   // Load game cartridge
   // TODO: Load game cartridge data
   // This will set the CBG mode flag
@@ -186,5 +188,178 @@ void Memory::VRAMDMATransfer() {
       gpu->writeData(writeDest + i, readData(readSource + i));
     }
     HDMA5 = 0; // Clear the HDMA5 register
+  }
+}
+
+void Memory::loadCartridge(const std::string filename) {
+  std::ifstream romFile(filename,
+                        std::ios::in | std::ios::binary | std::ios::ate);
+  if (!romFile.is_open()) {
+    std::cerr << "Error: Could not open ROM file." << std::endl;
+    exit(1);
+  }
+  int romSize = romFile.tellg();
+  BYTE *romData = new BYTE[romSize]; // Allocate memory for ROM data
+  romFile.seekg(0, std::ios::beg);   // Move to the beginning of the file
+  romFile.read(reinterpret_cast<char *>(romData), romSize); // Read the ROM data
+  romFile.close();                                          // Close the file
+
+  // Print out ROM header information
+
+  // Title
+  BYTE title[16];
+  for (int i = 0; i < 16; i++) {
+    title[i] = romData[0x0134 + i]; // Read the title from the ROM header
+  }
+  std::cout << "Title: ";
+  for (int i = 0; i < 16; i++) {
+    std::cout << title[i]; // Print the title
+  }
+  std::cout << std::endl;
+
+  // CGB Flag
+  BYTE cgbFlag = romData[0x0143]; // Read the CGB flag from the ROM header
+  if (cgbFlag == 0xC0 || cgbFlag == 0x80) {
+    CBG = true; // Set CBG mode flag
+    std::cout << "CGB Mode: Yes" << std::endl;
+  } else {
+    CBG = false; // Set CBG mode flag
+    std::cout << "CGB Mode: No" << std::endl;
+  }
+
+  // ROM Size
+  BYTE romSizeFlag =
+      romData[0x0148]; // Read the ROM size flag from the ROM header
+  int romSizeValue = 0;
+  if (romSizeFlag <= 0x07) {
+    romSizeValue = 32 << romSizeFlag; // Calculate ROM size
+  } else {
+    romSizeValue = 0; // Invalid ROM size
+  }
+  if (romSizeValue != 0) {
+    std::cout << "ROM Size: " << romSizeValue << " KB" << std::endl;
+  } else {
+    std::cout << "Invalid ROM Size" << std::endl;
+  }
+
+  // RAM Size
+  BYTE ramSizeFlag =
+      romData[0x0149]; // Read the RAM size flag from the ROM header
+  // RAM size values
+  // The 0x800 is there because apparently the 1 slot was "Listed in various unofficial docs as 2 KiB"
+  // but officially it is listed as unused.
+  int ramSizes[6] = {0, 0x800, 0x2000, 0x8000, 0x20000, 0x80000};
+  int ramSizeValue = 0;
+  switch (ramSizeFlag) {
+  case 0x00:
+    ramSizeValue = 0; // No RAM
+    break;
+  case 0x01:
+    ramSizeValue = 2; // Unused (kind of)
+    break;
+  case 0x02:
+    ramSizeValue = 8; // 8 KB
+    break;
+  case 0x03:
+    ramSizeValue = 32; // 32 KB
+    break;
+  case 0x04:
+    ramSizeValue = 128; // 128 KB
+    break;
+  case 0x05:
+    ramSizeValue = 64; // 64 KB
+    break;
+  default:
+    ramSizeValue = 0; // Invalid RAM size
+    break;
+  }
+  if (ramSizeValue != 0) {
+    std::cout << "RAM Size: " << ramSizeValue << " KB" << std::endl;
+  } else {
+    std::cout << "Invalid RAM Size" << std::endl;
+  }
+  ramSizeValue = ramSizes[ramSizeFlag]; // Set the actual RAM size value in Bytes
+
+  // Battery Things
+  std::string batteryPath = filename;
+  batteryPath.replace(batteryPath.end() - 4, batteryPath.end(), ".sav");
+
+  // MBC Type
+  BYTE mbcType = romData[0x0147]; // Read the MBC type from the ROM header
+  std::cout << "MBC Type: ";
+
+  // Switch case for MBC type
+  switch (mbcType) {
+  case 0x00: // No MBC
+    // TODO: Handle no MBC
+    std::cout << "No MBC" << std::endl;
+    break;
+  case 0x01: // MBC1
+    // TODO: Handle MBC1
+    std::cout << "MBC1" << std::endl;
+    break;
+  case 0x02: // MBC1 + RAM
+    // TODO: Handle MBC1 + RAM
+    std::cout << "MBC1 + RAM" << std::endl;
+    break;
+  case 0x03: // MBC1 + RAM + BATTERY
+    // TODO: Handle MBC1 + RAM + BATTERY
+    std::cout << "MBC1 + RAM + BATTERY" << std::endl;
+    break;
+  case 0x05: // MBC2
+    // TODO: Handle MBC2
+    std::cout << "MBC2" << std::endl;
+    break;
+  case 0x06: // MBC2 + BATTERY
+    // TODO: Handle MBC2 + BATTERY
+    std::cout << "MBC2 + BATTERY" << std::endl;
+    break;
+  case 0x0F: // MBC3 + TIMER + BATTERY
+    // TODO: Handle MBC3 + TIMER + BATTERY
+    std::cout << "MBC3 + TIMER + BATTERY" << std::endl;
+    break;
+  case 0x10: // MBC3 + TIMER
+    // TODO: Handle MBC3 + TIMER
+    std::cout << "MBC3 + TIMER" << std::endl;
+    break;
+  case 0x11: // MBC3
+    // TODO: Handle MBC3
+    std::cout << "MBC3" << std::endl;
+    break;
+  case 0x12: // MBC3 + RAM
+    // TODO: Handle MBC3 + RAM
+    std::cout << "MBC3 + RAM" << std::endl;
+    break;
+  case 0x13: // MBC3 + RAM + BATTERY
+    // TODO: Handle MBC3 + RAM + BATTERY
+    std::cout << "MBC3 + RAM + BATTERY" << std::endl;
+    break;
+  case 0x19: // MBC5
+    // TODO: Handle MBC5
+    std::cout << "MBC5" << std::endl;
+    break;
+  case 0x1A: // MBC5 + RAM
+    // TODO: Handle MBC5 + RAM
+    std::cout << "MBC5 + RAM" << std::endl;
+    break;
+  case 0x1B: // MBC5 + RAM + BATTERY
+    // TODO: Handle MBC5 + RAM + BATTERY
+    std::cout << "MBC5 + RAM + BATTERY" << std::endl;
+    break;
+  case 0x1C: // MBC5 + RUMBLE
+    // TODO: Handle MBC5 + RUMBLE
+    std::cout << "MBC5 + RUMBLE" << std::endl;
+    break;
+  case 0x1D: // MBC5 + RUMBLE + RAM
+    // TODO: Handle MBC5 + RUMBLE + RAM
+    std::cout << "MBC5 + RUMBLE + RAM" << std::endl;
+    break;
+  case 0x1E: // MBC5 + RUMBLE + RAM + BATTERY
+             // TODO: Handle MBC5 + RUMBLE + RAM + BATTERY
+    std::cout << "MBC5 + RUMBLE + RAM + BATTERY" << std::endl;
+    break;
+  default:
+    std::cout << "Unknown MBC Type" << std::endl;
+    break;
   }
 }
