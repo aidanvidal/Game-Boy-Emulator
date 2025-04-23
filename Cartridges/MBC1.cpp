@@ -12,6 +12,7 @@ MBC1::MBC1(BYTE *romData, int romSize, int ramSize,
   romBank = 1;             // Set initial ROM bank to 1
   ramBank = 0;             // Set initial RAM bank to 0
   ramEnabled = false;      // Disable RAM by default
+  bankingMode = false;     // Set banking mode to simple by default
 }
 
 MBC1::~MBC1() {
@@ -26,76 +27,102 @@ void MBC1::writeData(WORD address, BYTE data) {
 
   // RAM Enable/Disable
   if (address >= 0x0000 && address <= 0x1FFF) {
-    ramEnabled = (data & 0x0A) == 0x0A; // Enable RAM if data is 0x0A
+    ramEnabled = (data & 0x0F) == 0x0A; // Enable RAM if data is 0x0A
   }
 
-  // ROM Bank Number
+  // ROM Bank Number (5-bit register)
   else if (address >= 0x2000 && address <= 0x3FFF) {
-    // Mask to 5 bits and ensure bank 0 maps to bank 1
-    BYTE bank = data & 0x1F; // Extract lower 5 bits
-    if (bank == 0) {
-      bank = 1; // Bank 0 behaves as bank 1
+    // Extract lower 5 bits
+    romBank = data & 0x1F;
+    
+    // The bank 0 is treated as bank 1 in the 0x4000-0x7FFF region
+    if ((romBank & 0x1F) == 0) {
+      romBank = 1;
     }
-    // Mask the bank number to the number of available banks
-    int maxBanks = romSize / 0x4000; // Calculate the number of banks
-    romBank = bank % maxBanks;       // Ensure bank number is valid
   }
 
-  // RAM Bank Number or Upper bits of ROM Bank Number
+  // RAM Bank Number or Upper bits of ROM Bank Number (2-bit register)
   else if (address >= 0x4000 && address <= 0x5FFF) {
-    // Mask to 2 bits for RAM bank number
-    ramBank = data & 0x03; // Extract lower 2 bits
+    // Store the 2-bit value (0-3)
+    ramBank = data & 0x03;
   }
 
   // Banking Mode Select
   else if (address >= 0x6000 && address <= 0x7FFF) {
     // Set banking mode (0 = simple, 1 = advanced)
-    bankingMode = data & 0x01; // Extract the least significant bit
+    bankingMode = data & 0x01;
   }
 
   // RAM Data
-  else if (address >= 0xA000 && address <= 0xBFFF) {
-    if (ramEnabled && ramSize > 0) {
-      // Check if RAM is enabled
-      if (bankingMode) {
-        // Advanced mode: use RAM bank number
-        ram[((address & 0x1FFF) | (ramBank << 13)) & (ramSize - 1)] =
-            data; // Write to RAM
-      } else {
-        // Simple mode: use fixed RAM bank 0
-        ram[(address & 0x1FFF) & (ramSize - 1)] = data; // Write to RAM
-      }
+  else if (address >= 0xA000 && address <= 0xBFFF && ramEnabled && ramSize > 0) {
+    // Only write if RAM is enabled and exists
+    int ramAddress;
+    
+    if (bankingMode && ramSize > 0x2000) {
+    // Advanced mode: use RAM bank number (only matters for 8KB RAM)
+      ramAddress = (address & 0x1FFF) | (ramBank << 13);
+    } else {
+      // Simple mode: always use fixed RAM bank 0
+      ramAddress = address & 0x1FFF;
     }
+    
+    // Make sure we don't go beyond the RAM bounds
+    ramAddress &= (ramSize - 1);
+    ram[ramAddress] = data;
   }
 }
 
 BYTE MBC1::readData(WORD address) const {
-  // ROM Reads
-  if (address >= 0x0000 && address <= 0x7FFF) {
-    // Upper bank handling
-    if (address & 0x4000) {
-      // TODO: Check these (romSize - 1) and (ramSize - 1)
-      // also check the romBank << 14
-      if (bankingMode) {
-        return rom[((address & 0x3FFF) | (romBank << 14)) & (romSize - 1)];
-      } else {
-        return rom[(address & 0x3FFF) & (romSize - 1)];
-      }
+  // ROM Bank 0 (0000-3FFF)
+  if (address <= 0x3FFF) {
+    if (bankingMode && romSize > 0x80000) {  // Only for ROMs > 512KB
+      // In advanced mode, upper bits from ramBank apply to this region too
+      int effectiveBank = (ramBank << 5) & (romSize / 0x4000 - 1);
+      return rom[(address & 0x3FFF) | (effectiveBank << 14)];
+    } else {
+      // Fixed to bank 0 in simple mode
+      return rom[address & 0x3FFF];
     }
-    return rom[(address & 0x3FFF)];
+  }
+  
+  // ROM Bank 1-127 (4000-7FFF)
+  else if (address >= 0x4000 && address <= 0x7FFF) {
+    // Calculate effective bank number
+    int effectiveBank = romBank;
+    
+    // For large ROMs (>512KB), apply upper bits from ramBank
+    if (romSize > 0x80000) {  // 512KB
+      effectiveBank |= (ramBank << 5);
+    }
+    
+    // Ensure bank number is within ROM size bounds
+    effectiveBank &= (romSize / 0x4000 - 1);
+    
+    // Map to ROM address
+    return rom[(address & 0x3FFF) | (effectiveBank << 14)];
   }
 
-  // RAM Reads
+  // RAM (A000-BFFF)
   else if (address >= 0xA000 && address <= 0xBFFF) {
     if (ramEnabled && ramSize > 0) {
-      if (bankingMode) {
-        return ram[((address & 0x1FFF) | (ramBank << 13)) & (ramSize - 1)];
+      int ramAddress;
+      
+      if (bankingMode && ramSize > 0x2000) {  // Only relevant for 8KB RAM
+        // Advanced mode: use RAM bank number
+        ramAddress = (address & 0x1FFF) | (ramBank << 13);
       } else {
-        return ram[(address & 0x1FFF) & (ramSize - 1)];
+        // Simple mode: always use bank 0
+        ramAddress = address & 0x1FFF;
       }
+      
+      // Make sure we don't go beyond the RAM bounds
+      ramAddress &= (ramSize - 1);
+      return ram[ramAddress];
     }
+    return 0xFF;  // Default return for disabled RAM
   }
-  return 0xFF; // Default return value for invalid reads
+  
+  return 0xFF;  // Default return value for invalid reads
 }
 
 void MBC1::loadBattery() {
