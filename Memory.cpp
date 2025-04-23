@@ -1,4 +1,5 @@
 #include "Memory.h"
+#include "Cartridges/MBC1.h"
 #include "Cartridges/NoMBC.h"
 #include <cstdint>
 #include <fstream>
@@ -297,16 +298,18 @@ void Memory::loadCartridge(const std::string filename) {
     cartridge = new NoMBC(romData, romSize); // Create NoMBC object
     std::cout << "No MBC" << std::endl;
     break;
-  case 0x01: // MBC1
-    // TODO: Handle MBC1
+  case 0x01:                                   // MBC1
+    cartridge = new MBC1(romData, romSize, 0); // Create MBC1 object
     std::cout << "MBC1" << std::endl;
     break;
   case 0x02: // MBC1 + RAM
-    // TODO: Handle MBC1 + RAM
+    cartridge =
+        new MBC1(romData, romSize, ramSizeValue); // Create MBC1 + RAM object
     std::cout << "MBC1 + RAM" << std::endl;
     break;
   case 0x03: // MBC1 + RAM + BATTERY
-    // TODO: Handle MBC1 + RAM + BATTERY
+    cartridge = new MBC1(romData, romSize, ramSizeValue,
+                         batteryPath); // Create MBC1 + RAM + BATTERY object
     std::cout << "MBC1 + RAM + BATTERY" << std::endl;
     break;
   case 0x05: // MBC2

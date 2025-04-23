@@ -12,7 +12,10 @@ public:
   ~NoMBC();
 
   // Read and write functions
-  BYTE readData(WORD address) const; // Read data from memory
+  BYTE readData(WORD address) const override; // Read data from memory
+  void writeData(WORD address, BYTE data) override {
+    // No write operation for NoMBC
+  } // Write data to memory
 };
 
 #endif
