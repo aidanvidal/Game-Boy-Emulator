@@ -75,9 +75,9 @@ BYTE MBC1::readData(WORD address) const {
     // Upper bank handling
     if (address & 0x4000) {
       // TODO: Check these (romSize - 1) and (ramSize - 1)
-      // also check the ramBank << 14
+      // also check the romBank << 14
       if (bankingMode) {
-        return rom[((address & 0x3FFF) | (ramBank << 14)) & (romSize - 1)];
+        return rom[((address & 0x3FFF) | (romBank << 14)) & (romSize - 1)];
       } else {
         return rom[(address & 0x3FFF) & (romSize - 1)];
       }
