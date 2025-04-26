@@ -2,7 +2,6 @@
 #define MEMORY_H
 
 #include "APU/APU.h"
-#include "Cartridge/Cartridge.h"
 #include "Cartridges/Cartridge.h"
 #include "GPU.h"
 #include "Input.h"

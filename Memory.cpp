@@ -1,4 +1,5 @@
 #include "Memory.h"
+#include "APU/APU.h"
 #include "Cartridges/MBC1.h"
 #include "Cartridges/NoMBC.h"
 #include <cstdint>
@@ -169,6 +170,125 @@ void Memory::writeData(WORD address, BYTE data) {
     highRAM[address - 0xFF80] = data; // Write to high RAM
     return;
   }
+}
+
+BYTE Memory::readData(WORD address) const {
+  // Read from cartridge ROM (and handle MBC logic)
+  if (address <= 0x7FFF) {
+    // Check if boot ROM is enabled and address is in boot ROM range
+    if (bootROM && address < 0x0100) {
+      // TODO: Return data from boot ROM
+      return 0xFF; // Placeholder for now
+    }
+    return cartridge->readData(address);
+  }
+
+  // Read from VRAM
+  if (address >= 0x8000 && address <= 0x9FFF) {
+    return gpu->readData(address);
+  }
+
+  // Read from Cartridge RAM
+  if (address >= 0xA000 && address <= 0xBFFF) {
+    return cartridge->readData(address);
+  }
+
+  // Read from WRAM
+  if (address >= 0xC000 && address <= 0xFDFF) {
+    return wram->readData(address);
+  }
+
+  // Read from OAM
+  if (address >= 0xFE00 && address <= 0xFE9F) {
+    return gpu->readData(address);
+  }
+
+  // Read from I/O Ports
+  if (address >= 0xFF00 && address <= 0xFF7F) {
+    // Joypad
+    if (address == 0xFF00) {
+      return input->readJoypadState();
+    }
+    
+    // Serial Transfer
+    if (address == 0xFF01 || address == 0xFF02) {
+      // TODO: Handle serial transfer
+      return 0xFF;
+    }
+    
+    // Timer
+    if (address >= 0xFF04 && address <= 0xFF07) {
+      return timers->readData(address);
+    }
+    
+    // Interrupts
+    if (address == 0xFF0F) {
+      return interrupts->readIF();
+    }
+    
+    // APU
+    if (address >= 0xFF10 && address <= 0xFF3F) {
+      return apu->getData(address);
+    }
+    
+    // GPU registers
+    if (address >= 0xFF40 && address <= 0xFF4B) {
+      return gpu->readData(address);
+    }
+    
+    // Key 1
+    if (address == 0xFF4D) {
+      return key1;
+    }
+    
+    // VRAM Bank
+    if (address == 0xFF4F) {
+      return gpu->readData(address);
+    }
+    
+    // Boot ROM toggle
+    if (address == 0xFF50) {
+      return bootROM ? 0x00 : 0x01;
+    }
+    
+    // VRAM DMA registers
+    if (address >= 0xFF51 && address <= 0xFF55) {
+      switch (address) {
+        case 0xFF51: return HDMA1;
+        case 0xFF52: return HDMA2;
+        case 0xFF53: return HDMA3;
+        case 0xFF54: return HDMA4;
+        case 0xFF55: return HDMA5;
+        default: return 0xFF;
+      }
+    }
+    
+    // Palettes
+    if (address >= 0xFF68 && address <= 0xFF6B) {
+      return gpu->readData(address);
+    }
+    
+    // WRAM Bank
+    if (address == 0xFF70) {
+      return wram->readData(address);
+    }
+    
+    // Return 0xFF for unmapped I/O registers
+    return 0xFF;
+  }
+  
+  // Read from High RAM
+  if (address >= 0xFF80 && address <= 0xFFFE) {
+    return highRAM[address - 0xFF80];
+  }
+  
+  // Interrupt Enable Register
+  if (address == 0xFFFF) {
+    return interrupts->readIE();
+  }
+  
+  // Default return for unmapped memory
+  return 0xFF;
 }
 
 void Memory::OAMDMATransfer() {

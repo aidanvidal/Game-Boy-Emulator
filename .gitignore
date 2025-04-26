@@ -35,3 +35,6 @@ build/
 APU_emulator
 graphics
 testGPU.cpp
+ROMS/
+gameboy
+main.cpp

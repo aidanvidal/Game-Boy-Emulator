@@ -1,6 +1,6 @@
 #ifndef INPUT_H
 #define INPUT_H
-#include <Interrupts.h>
+#include "Interrupts.h"
 #include <SDL2/SDL.h>
 #include <cstdint>
 
