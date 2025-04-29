@@ -52,6 +52,7 @@ public:
   void writeByteNoProtect(WORD address, BYTE value); // For testing
   void loadCartridge(const std::string filename);
   void updateCycles(int cycles);
+  void updateTimers(int cycles);
   void renderGPU(SDL_Renderer *ren);
   GPU *gpu;               // GPU object
 

@@ -176,9 +176,9 @@ void GPU::updateGPU(int cycles) {
   while (cycleCount > 0) {
     switch (STAT & 0x03) {
     case 0: // HBlank
-      if (cycleCount < 204 * 4)
+      if (cycleCount < 204)
         return;
-      cycleCount -= 204 * 4;
+      cycleCount -= 204;
       LY++;
       checkLYC();
 
@@ -201,9 +201,9 @@ void GPU::updateGPU(int cycles) {
       break;
 
     case 1: // VBlank
-      if (cycleCount < 456 * 4)
+      if (cycleCount < 456)
         return;
-      cycleCount -= 456 * 4;
+      cycleCount -= 456;
       LY++;
       checkLYC();
 
@@ -220,18 +220,18 @@ void GPU::updateGPU(int cycles) {
       break;
 
     case 2: // OAM Search
-      if (cycleCount < 80 * 4)
+      if (cycleCount < 80)
         return;
-      cycleCount -= 80 * 4;
+      cycleCount -= 80;
       STAT = (STAT & 0xFC) | 0x03; // Mode 3
       // Find sprites for current line
       findSprites();
       break;
 
     case 3: // Pixel Transfer
-      if (cycleCount < 172 * 4)
+      if (cycleCount < 172)
         return;
-      cycleCount -= 172 * 4;
+      cycleCount -= 172;
       STAT = (STAT & 0xFC) | 0x00; // Mode 0
 
       renderScanline(); // Render LY to lineBuffer
@@ -313,8 +313,8 @@ void GPU::findSprites() {
   bool largeSprite = LCDC & 0x04; // Check if large sprites are enabled
 
   for (int i = 0; i < 40; i++) {
-    BYTE spriteY = OAM[i * 4]; // Y coordinate
-    if (spriteY == 0 || spriteY >= 160 || (spriteY <= 8 && !largeSprite)) {
+    uint8_t spriteY = OAM[i * 4]; // Y coordinate
+    if (spriteY == 0 || spriteY - 16 >= 144) {
       continue; // Skip if the sprite is not on the screen or Y ≤ 8 for 8×8
                 // sprites
     }
@@ -393,8 +393,8 @@ void GPU::renderBG() {
     int tileIndex = ((y / 8) * 32) + (x / 8);
     uint16_t mapLocation =
         ((LCDC & 0x08) ? 0x1C00 : 0x1800) + tileIndex; // Map location
-    uint16_t tileLocation = VRAM[mapLocation];             // Tile map content
-    uint8_t mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
+    uint16_t tileLocation = VRAM[mapLocation];         // Tile map content
+    uint8_t mapAtrribute = VRAM[0x2000 | mapLocation]; // Map attribute content
     // 0x8000 method
     if (LCDC & 0x10) {
       tileLocation <<= 4; // Shift since each tile is 16 bytes
@@ -402,8 +402,8 @@ void GPU::renderBG() {
     // 0x8800 method
     else {
       // Proper signed conversion
-			tileLocation = (128 + (int16_t)tileLocation) & 0xff;
-			tileLocation = 0x800 + (tileLocation << 4);
+      tileLocation = (128 + (int16_t)tileLocation) & 0xff;
+      tileLocation = 0x800 + (tileLocation << 4);
     }
 
     // Get pixels
@@ -444,6 +444,7 @@ void GPU::renderBG() {
     } else {
       lineBuffer[i] = getDMGColor(pixelData, BGP);
     }
+    bgColorIndices[i] = pixelData; // Add this line
   }
 }
 
@@ -466,8 +467,8 @@ void GPU::renderWindow() {
     int tileIndex = ((y / 8) * 32) + (x / 8); // Calculate tile index
     uint16_t mapLocation =
         ((LCDC & 0x40) ? 0x1C00 : 0x1800) + tileIndex; // Map location
-    uint16_t tileLocation = VRAM[mapLocation];             // Tile map content
-    uint8_t mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
+    uint16_t tileLocation = VRAM[mapLocation];         // Tile map content
+    uint8_t mapAtrribute = VRAM[0x2000 | mapLocation]; // Map attribute content
     // 0x8000 method
     if (LCDC & 0x10) {
       tileLocation <<= 4; // Shift since each tile is 16 bytes
@@ -475,8 +476,8 @@ void GPU::renderWindow() {
     // 0x8800 method
     else {
       // Proper signed conversion
-			tileLocation = (128 + (int16_t)tileLocation) & 0xff;
-			tileLocation = 0x800 + (tileLocation << 4);
+      tileLocation = (128 + (int16_t)tileLocation) & 0xff;
+      tileLocation = 0x800 + (tileLocation << 4);
     }
 
     // Get pixels
@@ -511,18 +512,19 @@ void GPU::renderWindow() {
     } else {
       lineBuffer[i] = getDMGColor(pixelData, BGP);
     }
+    bgColorIndices[i] = pixelData; // Add this line
   }
 }
 
 void GPU::renderSprites() {
-  BYTE spriteHeight =
+  uint8_t spriteHeight =
       (LCDC & 0x04) ? 16 : 8; // Check if large sprites are enabled
 
   // Sort visible sprites based on priority
   std::sort(visiableSprites, visiableSprites + spriteCount,
             [this](int a, int b) {
-              BYTE xA = OAM[a * 4 + 1]; // X coordinate of sprite A
-              BYTE xB = OAM[b * 4 + 1]; // X coordinate of sprite B
+              uint8_t xA = OAM[a * 4 + 1]; // X coordinate of sprite A
+              uint8_t xB = OAM[b * 4 + 1]; // X coordinate of sprite B
               if (CGB) {
                 // In CGB mode, priority is determined by OAM order
                 return a < b;
@@ -535,14 +537,14 @@ void GPU::renderSprites() {
 
   // Render sprites
   for (int i = 0; i < spriteCount; i++) {
-    BYTE spriteIndex = visiableSprites[i];
-    BYTE spriteY = OAM[spriteIndex * 4];        // Y coordinate
-    BYTE spriteX = OAM[spriteIndex * 4 + 1];    // X coordinate
-    BYTE tileIndex = OAM[spriteIndex * 4 + 2];  // Tile index
-    BYTE attributes = OAM[spriteIndex * 4 + 3]; // Attributes
+    uint8_t spriteIndex = visiableSprites[i];
+    uint8_t spriteY = OAM[spriteIndex * 4];        // Y coordinate
+    uint8_t spriteX = OAM[spriteIndex * 4 + 1];    // X coordinate
+    uint8_t tileIndex = OAM[spriteIndex * 4 + 2];  // Tile index
+    uint8_t attributes = OAM[spriteIndex * 4 + 3]; // Attributes
 
-    BYTE pixelY = (attributes & 0x40) ? (spriteHeight - 1) - (LY - spriteY)
-                                      : LY - spriteY; // Flip Y if needed
+    uint8_t pixelY = (attributes & 0x40) ? (spriteHeight - 1) - (LY - spriteY)
+                                         : LY - spriteY; // Flip Y if needed
 
     // Re-adjust the tile index for tall sprites
     if (spriteHeight == 16) {
@@ -563,8 +565,8 @@ void GPU::renderSprites() {
       tilePointer |= 0x2000;
     }
 
-    BYTE lowerByte = VRAM[tilePointer + (2 * (pixelY % 8))];
-    BYTE upperByte = VRAM[tilePointer + (2 * (pixelY % 8)) + 1];
+    int lowerByte = VRAM[tilePointer + (2 * (pixelY % 8))];
+    int upperByte = VRAM[tilePointer + (2 * (pixelY % 8)) + 1];
 
     // Render the sprite pixels
     for (int x = 0; x < 8; x++) {
@@ -583,15 +585,19 @@ void GPU::renderSprites() {
       }
 
       // Handle priority and overwrite conditions
+      // Priority handling
       if (CGB) {
-        // In CGB mode, skip if background has priority in the sprite attributes
-        // or if the background has priority in the map attributes
-        if (bgPriorties[screenX] || (attributes & 0x80)) {
-          continue;
+        bool bgPriority = bgPriorties[screenX];
+        uint8_t bgColor = bgColorIndices[screenX];
+        if (attributes & 0x80) { // Sprite behind BG
+          if (bgColor != 0)
+            continue;
+        } else { // Sprite in front
+          if (bgPriority && bgColor != 0)
+            continue;
         }
-      } else {
-        // In non-CGB mode, skip if background has priority in sprite atributes
-        if (attributes & 0x80) {
+      } else { // Non-CGB
+        if ((attributes & 0x80) && (bgColorIndices[screenX] != 0)) {
           continue;
         }
       }

@@ -497,8 +497,10 @@ void Memory::updateCycles(int cycles) {
   gpu->updateGPU(cycles); // Update GPU cycles
   apu->updateChannelTimers(cycles); // Update APU channel timers
   apu->apuStep(cycles); // Update APU
-  apu->getAudioSample(cycles); // Get APU audio sample
-  timers->updateTimers(cycles); // Update timers
+  // apu->getAudioSample(cycles); // Get APU audio sample
+}
+void Memory::updateTimers(int cycles){
+  timers->updateTimers(cycles);
 }
 void Memory::renderGPU(SDL_Renderer *ren) {
   gpu->renderFrame(ren); // Render GPU frame

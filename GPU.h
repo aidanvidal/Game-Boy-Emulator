@@ -58,6 +58,7 @@ private:
   uint16_t bgPalettes[8][4];     // 8 BG palettes, 4 colors each (RGB555)
   uint16_t objPalettes[8][4];    // 8 OBJ palettes, 4 colors each (RGB555)
   bool bgPriorties[160];         // Background priorities for each pixel
+  uint8_t bgColorIndices[160];   // New buffer for BG color indices (0-3)
   SDL_Surface *backgroundGlobal; // Global background surface
 
   // HDMA length for VRAM transfer
