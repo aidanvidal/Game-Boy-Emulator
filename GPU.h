@@ -21,7 +21,6 @@ private:
   // Need WRAM and WRAM bank registers for CGB mode
 
   Interrupts *interrupts; // Interrupts object to handle interrupts
-  Memory *memory;         // Memory object to access memory
 
   // Memory For GPU
   // Link for VRAM info:
@@ -90,7 +89,8 @@ public:
   void setHDMA(BYTE len, WORD source, WORD dest,
                bool active);                        // Set the HDMA
   BYTE getHDMALength() const { return HDMALength; } // Get the HDMA length
-  bool vBlank; // Flag to indicate if the screen is blank
+  bool vBlank;    // Flag to indicate if the screen is blank
+  Memory *memory; // Memory object to access memory
 };
 
 #endif

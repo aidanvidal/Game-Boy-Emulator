@@ -1,57 +1,41 @@
 #include "Memory.h"
 #include "APU/APU.h"
-#include "Cartridges/MBC1.h"
 #include "Cartridges/NoMBC.h"
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 
 Memory::Memory(const std::string filename) {
-  // Load game cartridge
-  // TODO: Load game cartridge data
-  // This will set the CBG mode flag
-  // and load the proper MBC
   loadCartridge(filename);
-
-  // Initialize the interrupts
   interrupts = new Interrupts();
-
-  // Initialize the GPU
   gpu = new GPU(interrupts, CBG, this);
-
-  // Initialize the WRAM
   wram = new WRAM();
-
-  // Initialize the APU
   apu = new APU();
-
-  // Initialize the Timers
   timers = new Timers(interrupts);
-
-  // Initialize the Input
   input = new Input(interrupts);
+  memset(highRAM, 0, sizeof(highRAM));
+  bootROM = false;
+}
 
-  // Initialize the high RAM
-  for (int i = 0; i < 0x80; i++) {
-    highRAM[i] = 0; // Initialize high RAM with zeros
-  }
-
-  // Initialize the boot ROM
-  bootROM = true; // Set boot ROM flag to true
+Memory::Memory(Cartridge *cartridge, Interrupts *interrupts, Timers *timers,
+               GPU *gpu, Input *input, APU *apu, WRAM *wram, bool CBG)
+    : cartridge(cartridge), interrupts(interrupts), timers(timers), gpu(gpu),
+      input(input), apu(apu), wram(wram), CBG(CBG) {
+  memset(highRAM, 0, sizeof(highRAM));
+  bootROM = false;
 }
 
 Memory::~Memory() {
-  // Destructor
-  free(interrupts);
-  free(gpu);
-  free(wram);
-  free(apu);
-  free(timers);
-  free(input);
-  free(cartridge);
+  delete interrupts;
+  delete gpu;
+  delete wram;
+  delete apu;
+  delete timers;
+  delete input;
+  delete cartridge;
 }
 
-void Memory::writeData(WORD address, BYTE data) {
+void Memory::writeByte(WORD address, BYTE data) {
 
   // TODO: Handle MBC (Memory Bank Controller) logic
   // external RAM (also apart of cartridge)
@@ -172,14 +156,11 @@ void Memory::writeData(WORD address, BYTE data) {
   }
 }
 
-BYTE Memory::readData(WORD address) const {
+BYTE Memory::readByte(WORD address) const {
   // Read from cartridge ROM (and handle MBC logic)
   if (address <= 0x7FFF) {
-    // Check if boot ROM is enabled and address is in boot ROM range
-    if (bootROM && address < 0x0100) {
-      // TODO: Return data from boot ROM
-      return 0xFF; // Placeholder for now
-    }
+    if (bootROM && address < 0x0100)
+      return 0xFF; // Boot ROM placeholder
     return cartridge->readData(address);
   }
 
@@ -209,92 +190,115 @@ BYTE Memory::readData(WORD address) const {
     if (address == 0xFF00) {
       return input->readJoypadState();
     }
-    
+
     // Serial Transfer
     if (address == 0xFF01 || address == 0xFF02) {
       // TODO: Handle serial transfer
       return 0xFF;
     }
-    
+
     // Timer
     if (address >= 0xFF04 && address <= 0xFF07) {
       return timers->readData(address);
     }
-    
+
     // Interrupts
     if (address == 0xFF0F) {
       return interrupts->readIF();
     }
-    
+
     // APU
     if (address >= 0xFF10 && address <= 0xFF3F) {
       return apu->getData(address);
     }
-    
+
     // GPU registers
     if (address >= 0xFF40 && address <= 0xFF4B) {
       return gpu->readData(address);
     }
-    
+
     // Key 1
     if (address == 0xFF4D) {
       return key1;
     }
-    
+
     // VRAM Bank
     if (address == 0xFF4F) {
       return gpu->readData(address);
     }
-    
+
     // Boot ROM toggle
     if (address == 0xFF50) {
       return bootROM ? 0x00 : 0x01;
     }
-    
+
     // VRAM DMA registers
     if (address >= 0xFF51 && address <= 0xFF55) {
       switch (address) {
-        case 0xFF51: return HDMA1;
-        case 0xFF52: return HDMA2;
-        case 0xFF53: return HDMA3;
-        case 0xFF54: return HDMA4;
-        case 0xFF55: return HDMA5;
-        default: return 0xFF;
+      case 0xFF51:
+        return HDMA1;
+      case 0xFF52:
+        return HDMA2;
+      case 0xFF53:
+        return HDMA3;
+      case 0xFF54:
+        return HDMA4;
+      case 0xFF55:
+        return HDMA5;
+      default:
+        return 0xFF;
       }
     }
-    
+
     // Palettes
     if (address >= 0xFF68 && address <= 0xFF6B) {
       return gpu->readData(address);
     }
-    
+
     // WRAM Bank
     if (address == 0xFF70) {
       return wram->readData(address);
     }
-    
+
     // Return 0xFF for unmapped I/O registers
     return 0xFF;
   }
-  
+
   // Read from High RAM
   if (address >= 0xFF80 && address <= 0xFFFE) {
     return highRAM[address - 0xFF80];
   }
-  
+
   // Interrupt Enable Register
   if (address == 0xFFFF) {
     return interrupts->readIE();
   }
-  
+
   // Default return for unmapped memory
   return 0xFF;
+}
+
+WORD Memory::readWord(WORD address) const {
+  BYTE low = readByte(address);
+  BYTE high = readByte(address + 1);
+  return (high << 8) | low;
+}
+
+void Memory::writeWord(WORD address, WORD value) {
+  BYTE low = value & 0xFF;
+  BYTE high = (value >> 8) & 0xFF;
+  writeByte(address, low);
+  writeByte(address + 1, high);
+}
+
+void Memory::writeByteNoProtect(WORD address, BYTE value) {
+  writeByte(address, value); // Write without protection
 }
 
 void Memory::OAMDMATransfer() {
   uint16_t readSource = OAMDMA << 8; // Destination address in OAM
   for (int i = 0; i < 0xA0; i++) {
-    gpu->writeData(0xFE00 + i, readData(readSource + i));
+    gpu->writeData(0xFE00 + i, readByte(readSource + i));
   }
 }
 
@@ -308,24 +312,23 @@ void Memory::VRAMDMATransfer() {
   if (!hblank) {
     // Preform the general purpose DMA transfer
     for (int i = 0; i < length; i++) {
-      gpu->writeData(writeDest + i, readData(readSource + i));
+      gpu->writeData(writeDest + i, readByte(readSource + i));
     }
     HDMA5 = 0; // Clear the HDMA5 register
   }
 }
 
 void Memory::loadCartridge(const std::string filename) {
-  std::ifstream romFile(filename,
-                        std::ios::in | std::ios::binary | std::ios::ate);
+  std::ifstream romFile(filename, std::ios::binary | std::ios::ate);
   if (!romFile.is_open()) {
-    std::cerr << "Error: Could not open ROM file." << std::endl;
+    std::cerr << "Error opening ROM file." << std::endl;
     exit(1);
   }
   int romSize = romFile.tellg();
-  BYTE *romData = new BYTE[romSize]; // Allocate memory for ROM data
-  romFile.seekg(0, std::ios::beg);   // Move to the beginning of the file
-  romFile.read(reinterpret_cast<char *>(romData), romSize); // Read the ROM data
-  romFile.close();                                          // Close the file
+  BYTE *romData = new BYTE[romSize];
+  romFile.seekg(0);
+  romFile.read(reinterpret_cast<char *>(romData), romSize);
+  romFile.close();
 
   // Print out ROM header information
 
@@ -419,17 +422,17 @@ void Memory::loadCartridge(const std::string filename) {
     std::cout << "No MBC" << std::endl;
     break;
   case 0x01:                                   // MBC1
-    cartridge = new MBC1(romData, romSize, 0); // Create MBC1 object
+    // cartridge = new MBC1(romData, romSize, 0); // Create MBC1 object
     std::cout << "MBC1" << std::endl;
     break;
   case 0x02: // MBC1 + RAM
-    cartridge =
-        new MBC1(romData, romSize, ramSizeValue); // Create MBC1 + RAM object
+    // cartridge =
+    //     new MBC1(romData, romSize, ramSizeValue); // Create MBC1 + RAM object
     std::cout << "MBC1 + RAM" << std::endl;
     break;
   case 0x03: // MBC1 + RAM + BATTERY
-    cartridge = new MBC1(romData, romSize, ramSizeValue,
-                         batteryPath); // Create MBC1 + RAM + BATTERY object
+    // cartridge = new MBC1(romData, romSize, ramSizeValue,
+    //                      batteryPath); // Create MBC1 + RAM + BATTERY object
     std::cout << "MBC1 + RAM + BATTERY" << std::endl;
     break;
   case 0x05: // MBC2
@@ -488,4 +491,15 @@ void Memory::loadCartridge(const std::string filename) {
     std::cout << "Unknown MBC Type" << std::endl;
     break;
   }
+}
+
+void Memory::updateCycles(int cycles) {
+  gpu->updateGPU(cycles); // Update GPU cycles
+  apu->updateChannelTimers(cycles); // Update APU channel timers
+  apu->apuStep(cycles); // Update APU
+  apu->getAudioSample(cycles); // Get APU audio sample
+  timers->updateTimers(cycles); // Update timers
+}
+void Memory::renderGPU(SDL_Renderer *ren) {
+  gpu->renderFrame(ren); // Render GPU frame
 }

@@ -141,12 +141,8 @@ void ChannelOne::reset() {
 }
 
 float ChannelOne::getSample() {
-  if (!state.dacEnabled) {
-    return 7.0f;
-  }
-
-  if (!isEnabled()) {
-    return 15.0f;
+  if (!state.dacEnabled || !isEnabled()) {
+    return 0.0f; // DAC disabled
   }
 
   static const int dutyTable[4][8] = {

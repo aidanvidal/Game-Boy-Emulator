@@ -391,10 +391,10 @@ void GPU::renderBG() {
     // Calculate tile index
     // Each tile is 8x8 pixels, so we divide the coordinates by 8
     int tileIndex = ((y / 8) * 32) + (x / 8);
-    WORD mapLocation =
+    uint16_t mapLocation =
         ((LCDC & 0x08) ? 0x1C00 : 0x1800) + tileIndex; // Map location
-    BYTE tileLocation = VRAM[mapLocation];             // Tile map content
-    BYTE mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
+    uint16_t tileLocation = VRAM[mapLocation];             // Tile map content
+    uint8_t mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
     // 0x8000 method
     if (LCDC & 0x10) {
       tileLocation <<= 4; // Shift since each tile is 16 bytes
@@ -402,9 +402,8 @@ void GPU::renderBG() {
     // 0x8800 method
     else {
       // Proper signed conversion
-      int8_t signedTile = static_cast<int8_t>(tileLocation);
-      tileLocation = static_cast<BYTE>(signedTile);
-      tileLocation = 0x800 + (tileLocation << 4);
+			tileLocation = (128 + (int16_t)tileLocation) & 0xff;
+			tileLocation = 0x800 + (tileLocation << 4);
     }
 
     // Get pixels
@@ -465,10 +464,10 @@ void GPU::renderWindow() {
       x = 0; // Wrap around X scroll
     }
     int tileIndex = ((y / 8) * 32) + (x / 8); // Calculate tile index
-    WORD mapLocation =
+    uint16_t mapLocation =
         ((LCDC & 0x40) ? 0x1C00 : 0x1800) + tileIndex; // Map location
-    BYTE tileLocation = VRAM[mapLocation];             // Tile map content
-    BYTE mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
+    uint16_t tileLocation = VRAM[mapLocation];             // Tile map content
+    uint8_t mapAtrribute = VRAM[0x2000 | mapLocation];    // Map attribute content
     // 0x8000 method
     if (LCDC & 0x10) {
       tileLocation <<= 4; // Shift since each tile is 16 bytes
@@ -476,9 +475,8 @@ void GPU::renderWindow() {
     // 0x8800 method
     else {
       // Proper signed conversion
-      int8_t signedTile = static_cast<int8_t>(tileLocation);
-      tileLocation = static_cast<BYTE>(signedTile);
-      tileLocation = 0x800 + (tileLocation << 4);
+			tileLocation = (128 + (int16_t)tileLocation) & 0xff;
+			tileLocation = 0x800 + (tileLocation << 4);
     }
 
     // Get pixels
@@ -624,7 +622,7 @@ void GPU::setHDMA(BYTE len, WORD source, WORD dest, bool active) {
 void GPU::doHDMATransfer() {
   // Get data from memory based on source
   // and write to destination, do only one transfer
-  writeData(HDMADest, memory->readData(HDMASource));
+  writeData(HDMADest, memory->readByte(HDMASource));
   HDMASource++;
   HDMADest++;
   HDMALength--;

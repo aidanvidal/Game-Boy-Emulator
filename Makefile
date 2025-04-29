@@ -20,7 +20,7 @@ GRAPHICS_OBJS = $(GRAPHICS_SRCS:%.cpp=$(BUILD_DIR)/%.o)
 
 # GameBoy Component (placeholder for future use)
 GAMEBOY_TARGET = gameboy
-GAMEBOY_SRCS = main.cpp CPU.cpp Memory.cpp Interrupts.cpp Input.cpp GPU.cpp Timers.cpp WRAM.cpp APU/APU.cpp APU/channelTwo.cpp APU/channelOne.cpp APU/channelFour.cpp APU/channelThree.cpp Cartridges/Cartridge.cpp Cartridges/MBC1.cpp Cartridges/NoMBC.cpp
+GAMEBOY_SRCS = main.cpp CPU.cpp Memory.cpp Interrupts.cpp Input.cpp GPU.cpp Timers.cpp WRAM.cpp APU/APU.cpp APU/channelTwo.cpp APU/channelOne.cpp APU/channelFour.cpp APU/channelThree.cpp Cartridges/Cartridge.cpp Cartridges/NoMBC.cpp
 GAMEBOY_OBJS = $(GAMEBOY_SRCS:%.cpp=$(BUILD_DIR)/%.o)
 
 # Default target

@@ -173,11 +173,8 @@ void ChannelThree::reset() {
 
 // Get the sample from Channel Three
 float ChannelThree::getSample() {
-  if (!state.dacEnabled) {
-    return 7.0f; // If DAC is disabled, return 0
-  }
-  if (!isEnabled()) {
-    return 15.0f; // Disabled channel outputs "analog 1"
+  if (!state.dacEnabled || !isEnabled()) {
+    return 0.0f; // DAC disabled
   }
 
   // Convert the shifted digital sample to an analog value (-1.0 to 1.0)

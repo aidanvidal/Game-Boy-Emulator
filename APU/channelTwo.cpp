@@ -164,12 +164,8 @@ void ChannelTwo::reset() {
 // Returns a value between -1.0 and 1.0
 // 0.0 represents the middle of the waveform
 float ChannelTwo::getSample() {
-  if (!state.dacEnabled) {
-    return 7.0f; // If DAC is disabled, output 0
-  }
-
-  if (!isEnabled()) {
-    return 15.0f; // Disabled channel outputs "analog 1"
+  if (!state.dacEnabled || !isEnabled()) {
+    return 0.0f; // DAC disabled
   }
 
   // Use duty table for waveform lookup

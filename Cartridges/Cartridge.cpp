@@ -9,4 +9,3 @@ Cartridge::Cartridge() {
 Cartridge::~Cartridge() {
   // Empty destructor
 }
-

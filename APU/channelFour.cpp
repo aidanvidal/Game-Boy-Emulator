@@ -173,13 +173,9 @@ void ChannelFour::reset() {
 
 // Get the sample from Channel Four
 float ChannelFour::getSample() {
-  if (!state.dacEnabled) {
-    return 7.0f; // If DAC is disabled, return 0
+  if (!state.dacEnabled || !isEnabled()) {
+    return 0.0f; // DAC disabled
   }
-  if (!isEnabled()) {
-    return 15.0f; // Disabled channel outputs "analog 1"
-  }
-
   // Use LFSR for waveform generation
   return (state.lfsr & 1) ? state.volume : 0; // Return volume if LFSR is high
 }
