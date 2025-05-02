@@ -21,7 +21,7 @@ make emulator
 
 ## Images
 
-![Tetris Screenshot](images/tetris.png)
+<img src="images/tetris.png" alt="Tetris Screenshot" width="500">
 
 ## TODO:
 -   Cartridge things
