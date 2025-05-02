@@ -19,13 +19,12 @@ make emulator
 ./emulator filename.rom
 ```
 
+## Images
+
+![Tetris Screenshot](images/tetris.png)
+
 ## TODO:
 -   Cartridge things
--   Serial Data Transfer
--   Finish Interrurpts
--   A lot of instructions
--   Combine parts into Memory class
--   Create final cycle accurate Game Boy CPU loop
 -   Test and debug
 
 ## Extra Info
