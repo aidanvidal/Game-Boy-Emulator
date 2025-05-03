@@ -1,21 +1,20 @@
 #ifndef NOMBC_H
 #define NOMBC_H
 #include "Cartridge.h"
-
-class NoMBC : public Cartridge {
-private:
-  BYTE *rom;   // Pointer to ROM data
-  int romSize; // Size of the ROM
+class NOMBC : public Cartridge {
 public:
-  // Constructor
-  NoMBC(BYTE *romData, int size);
-  ~NoMBC();
+  NOMBC(uint8_t *romData, int romSize);
+  ~NOMBC();
+  void writeData(uint16_t address, uint8_t data) override;
+  uint8_t readData(uint16_t address) override;
 
-  // Read and write functions
-  BYTE readData(WORD address) const override; // Read data from memory
-  void writeData(WORD address, BYTE data) override {
-    // No write operation for NoMBC
-  } // Write data to memory
+  // Battery functions
+  void setBatteryLocation(string batteryPath) override;
+  void saveBatteryData() override;
+
+private:
+  uint8_t *romData;
+  unsigned int romSize;
 };
 
-#endif
+#endif // NOMBC_H

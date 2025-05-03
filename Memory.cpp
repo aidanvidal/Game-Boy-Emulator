@@ -1,5 +1,7 @@
 #include "Memory.h"
 #include "APU/APU.h"
+#include "Cartridges/MBC1.h"
+#include "Cartridges/MBC3.h"
 #include "Cartridges/NoMBC.h"
 #include <cstdint>
 #include <fstream>
@@ -39,6 +41,11 @@ void Memory::writeByte(WORD address, BYTE data) {
 
   // TODO: Handle MBC (Memory Bank Controller) logic
   // external RAM (also apart of cartridge)
+
+  if (address >= 0x0000 && address <= 0x7FFF) {
+    cartridge->writeData(address, data); // Write to cartridge ROM
+    return;
+  }
 
   // VRAM
   if (address >= 0x8000 && address <= 0x9FFF) {
@@ -324,7 +331,7 @@ void Memory::loadCartridge(const std::string filename) {
     std::cerr << "Error opening ROM file." << std::endl;
     exit(1);
   }
-  int romSize = romFile.tellg();
+  unsigned int romSize = romFile.tellg();
   BYTE *romData = new BYTE[romSize];
   romFile.seekg(0);
   romFile.read(reinterpret_cast<char *>(romData), romSize);
@@ -418,50 +425,50 @@ void Memory::loadCartridge(const std::string filename) {
   // Switch case for MBC type
   switch (mbcType) {
   case 0x00:                                 // No MBC
-    cartridge = new NoMBC(romData, romSize); // Create NoMBC object
+    cartridge = new NOMBC(romData, romSize); // Create NoMBC object
     std::cout << "No MBC" << std::endl;
     break;
   case 0x01:                                   // MBC1
-    // cartridge = new MBC1(romData, romSize, 0); // Create MBC1 object
+    cartridge = new MBC1(romData, romSize, 0); // Create MBC1 object
     std::cout << "MBC1" << std::endl;
     break;
   case 0x02: // MBC1 + RAM
-    // cartridge =
-    //     new MBC1(romData, romSize, ramSizeValue); // Create MBC1 + RAM object
+    cartridge =
+        new MBC1(romData, romSize, ramSizeValue); // Create MBC1 + RAM object
     std::cout << "MBC1 + RAM" << std::endl;
     break;
   case 0x03: // MBC1 + RAM + BATTERY
-    // cartridge = new MBC1(romData, romSize, ramSizeValue,
-    //                      batteryPath); // Create MBC1 + RAM + BATTERY object
     std::cout << "MBC1 + RAM + BATTERY" << std::endl;
-    break;
-  case 0x05: // MBC2
-    // TODO: Handle MBC2
-    std::cout << "MBC2" << std::endl;
-    break;
-  case 0x06: // MBC2 + BATTERY
-    // TODO: Handle MBC2 + BATTERY
-    std::cout << "MBC2 + BATTERY" << std::endl;
+    cartridge = new MBC1(romData, romSize,
+                         ramSizeValue); // Create MBC1 + RAM + BATTERY object
+    cartridge->setBatteryLocation(batteryPath); // Set battery location
     break;
   case 0x0F: // MBC3 + TIMER + BATTERY
-    // TODO: Handle MBC3 + TIMER + BATTERY
     std::cout << "MBC3 + TIMER + BATTERY" << std::endl;
+    cartridge = new MBC3(romData, romSize, 0,
+                         true); // Create MBC3 + TIMER + BATTERY object
+    cartridge->setBatteryLocation(batteryPath); // Set battery location
     break;
   case 0x10: // MBC3 + TIMER
-    // TODO: Handle MBC3 + TIMER
     std::cout << "MBC3 + TIMER" << std::endl;
+    cartridge = new MBC3(romData, romSize, 0,
+                         true); // Create MBC3 + TIMER object
     break;
   case 0x11: // MBC3
-    // TODO: Handle MBC3
     std::cout << "MBC3" << std::endl;
+    cartridge = new MBC3(romData, romSize, 0,
+                         false); // Create MBC3 object
     break;
   case 0x12: // MBC3 + RAM
-    // TODO: Handle MBC3 + RAM
     std::cout << "MBC3 + RAM" << std::endl;
+    cartridge = new MBC3(romData, romSize, ramSizeValue,
+                         false); // Create MBC3 + RAM object
     break;
   case 0x13: // MBC3 + RAM + BATTERY
-    // TODO: Handle MBC3 + RAM + BATTERY
     std::cout << "MBC3 + RAM + BATTERY" << std::endl;
+    cartridge = new MBC3(romData, romSize, ramSizeValue,
+                         false); // Create MBC3 + RAM + BATTERY object
+    cartridge->setBatteryLocation(batteryPath); // Set battery location
     break;
   case 0x19: // MBC5
     // TODO: Handle MBC5
@@ -494,14 +501,12 @@ void Memory::loadCartridge(const std::string filename) {
 }
 
 void Memory::updateCycles(int cycles) {
-  gpu->updateGPU(cycles); // Update GPU cycles
+  gpu->updateGPU(cycles);           // Update GPU cycles
   apu->updateChannelTimers(cycles); // Update APU channel timers
-  apu->apuStep(cycles); // Update APU
+  apu->apuStep(cycles);             // Update APU
   // apu->getAudioSample(cycles); // Get APU audio sample
 }
-void Memory::updateTimers(int cycles){
-  timers->updateTimers(cycles);
-}
+void Memory::updateTimers(int cycles) { timers->updateTimers(cycles); }
 void Memory::renderGPU(SDL_Renderer *ren) {
   gpu->renderFrame(ren); // Render GPU frame
 }

@@ -54,8 +54,7 @@ public:
   void updateCycles(int cycles);
   void updateTimers(int cycles);
   void renderGPU(SDL_Renderer *ren);
-  GPU *gpu;               // GPU object
-
+  GPU *gpu; // GPU object
 };
 
 #endif

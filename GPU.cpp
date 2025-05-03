@@ -171,83 +171,75 @@ BYTE GPU::readData(WORD address) const {
 }
 
 void GPU::updateGPU(int cycles) {
-  // TODO: Check if the cycle logic is correct when testing
+  // Add cycles to the counter
   cycleCount += cycles;
-  while (cycleCount > 0) {
-    switch (STAT & 0x03) {
-    case 0: // HBlank
-      if (cycleCount < 204)
-        return;
-      cycleCount -= 204;
+  
+  // Process mode changes based on current mode
+  while (cycleCount >= getModeDuration()) {
+    cycleCount -= getModeDuration();
+    advanceMode();
+  }
+}
+
+// Add this method to get the duration of the current mode
+int GPU::getModeDuration() {
+  switch (STAT & 0x03) {
+    case 0: return 204;  // HBlank
+    case 1: return 456;  // VBlank
+    case 2: return 80;   // OAM Search
+    case 3: return 172;  // Pixel Transfer
+    default: return 456; // Fallback
+  }
+}
+
+// Add this method to advance to the next mode
+void GPU::advanceMode() {
+  // Current mode
+  int mode = STAT & 0x03;
+  
+  switch (mode) {
+    case 0: // HBlank -> OAM Search (Mode 2) or VBlank (Mode 1)
       LY++;
       checkLYC();
-
-      if (LY == 144) {               // Enter VBlank
-        STAT = (STAT & 0xFC) | 0x01; // Mode 1
-        // Check for VBlank Stat interrupt
-        if (STAT & 0x01) {
-          interrupts->setLCDStatFlag(true);
-        }
-        // Send VBlank interrupt
+      
+      if (LY == 144) {
+        STAT = (STAT & 0xFC) | 0x01; // Mode 1 (VBlank)
+        if (STAT & 0x10) interrupts->setLCDStatFlag(true);
         interrupts->setVBlankFlag(true);
         vBlank = true;
       } else {
-        STAT = (STAT & 0xFC) | 0x02; // Mode 2
-        // Check for OAM interrupt
-        if (STAT & 0x02) {
-          interrupts->setLCDStatFlag(true);
-        }
+        STAT = (STAT & 0xFC) | 0x02; // Mode 2 (OAM Search)
+        if (STAT & 0x20) interrupts->setLCDStatFlag(true);
+        findSprites(); // Search for sprites on this line
       }
       break;
-
+      
     case 1: // VBlank
-      if (cycleCount < 456)
-        return;
-      cycleCount -= 456;
       LY++;
       checkLYC();
-
-      if (LY > 153) { // End of VBlank
+      
+      if (LY > 153) {
         LY = 0;
-        windowLine = 0; // Reset window line
-        // Check for OAM interrupt
-        if (STAT & 0x02) {
-          interrupts->setLCDStatFlag(true);
-        }
-        STAT = (STAT & 0xFC) | 0x02; // Mode 2
+        windowLine = 0;
+        STAT = (STAT & 0xFC) | 0x02; // Mode 2 (OAM Search)
+        if (STAT & 0x20) interrupts->setLCDStatFlag(true);
+        findSprites(); // Search for sprites on line 0
         vBlank = false;
       }
       break;
-
-    case 2: // OAM Search
-      if (cycleCount < 80)
-        return;
-      cycleCount -= 80;
-      STAT = (STAT & 0xFC) | 0x03; // Mode 3
-      // Find sprites for current line
-      findSprites();
+      
+    case 2: // OAM Search -> Pixel Transfer (Mode 3)
+      STAT = (STAT & 0xFC) | 0x03;
       break;
-
-    case 3: // Pixel Transfer
-      if (cycleCount < 172)
-        return;
-      cycleCount -= 172;
-      STAT = (STAT & 0xFC) | 0x00; // Mode 0
-
-      renderScanline(); // Render LY to lineBuffer
-
-      // Check for HBlank interrupt
-      if (STAT & 0x08) {
-        interrupts->setLCDStatFlag(true);
-      }
-
-      // Do HDMA transfer if needed
+      
+    case 3: // Pixel Transfer -> HBlank (Mode 0)
+      STAT = (STAT & 0xFC) | 0x00;
+      renderScanline(); // Render the current scanline
+      if (STAT & 0x08) interrupts->setLCDStatFlag(true);
       if (HDMALength > 0 && HDMAActive) {
         doHDMATransfer();
       }
-
       break;
-    }
   }
 }
 

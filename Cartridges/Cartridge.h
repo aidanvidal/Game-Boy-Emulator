@@ -1,25 +1,29 @@
 #ifndef CARTRIDGE_H
 #define CARTRIDGE_H
-#include <cstdint>
-#include <fstream>
+#include <stdint.h>
 #include <iostream>
-#include <string>
+#include <stdio.h>
+#include <stdint.h>
+#include <fstream>
 
-typedef unsigned char BYTE;
-typedef unsigned short WORD;
+using namespace std;
 
-// This is a base class for the cartridge
-// It will be inherited by different MBC classes
-// such as NoMBC, MBC1, MBC2, etc.
-// Each MBC class will implement its own read and write functions
-// to handle the specific memory mapping and banking logic
-// for that MBC type
-class Cartridge {
+
+class Cartridge
+{
 public:
-  Cartridge();
-  virtual ~Cartridge();
-  virtual BYTE readData(WORD address) const = 0;       // Pure virtual function
-  virtual void writeData(WORD address, BYTE data) = 0; // Pure virtual function
+	Cartridge();
+	virtual ~Cartridge();
+
+	virtual void writeData(uint16_t address, uint8_t data) = 0;
+	virtual uint8_t readData(uint16_t address) = 0;
+
+	// Save battery definers
+	virtual void setBatteryLocation(string batteryPath) = 0;
+	virtual void saveBatteryData() = 0;
+
+	static bool loadBatteryFile(uint8_t* extRAm, unsigned int ramSize, string inBatteryPath);
+	static void saveBatteryFile(uint8_t* extRAM, unsigned int ramSize, string inBatteryPath);
 };
 
-#endif
+#endif // CARTRIDGE_H

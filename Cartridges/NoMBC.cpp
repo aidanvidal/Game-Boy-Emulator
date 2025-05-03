@@ -1,15 +1,34 @@
-#include "NoMBC.h"
+#include "NOMBC.h"
 
-NoMBC::NoMBC(BYTE *romData, int size) : rom(romData), romSize(size) {
-  // Constructor
+
+
+NOMBC::NOMBC(uint8_t* romData, int romSize): romData(romData), romSize(romSize)
+{
+	if (romSize > 0x8000) {
+		cout << "ROM too large for NOMBC. We'll mask out but it will likely fail";
+	}
 }
 
-NoMBC::~NoMBC() {
-  // Destructor
-  free(rom); // Free the allocated memory for ROM data
+
+NOMBC::~NOMBC()
+{
+	free(romData);
 }
 
-BYTE NoMBC::readData(WORD address) const {
-  // Read data from ROM
-  return rom[address & 0x7FFF]; // Mask address to 15 bits
+void NOMBC::writeData(uint16_t address, uint8_t data)
+{
+	// NOMBC has no registers
+}
+
+uint8_t NOMBC::readData(uint16_t address)
+{
+	return romData[address & 0x7FFF];
+}
+
+void NOMBC::setBatteryLocation(string inBatteryPath)
+{
+}
+
+void NOMBC::saveBatteryData()
+{
 }

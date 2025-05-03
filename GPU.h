@@ -79,6 +79,9 @@ private:
   uint32_t cgbToARGB(uint16_t rgb555); // Convert RGB555 to ARGB8888
   void doHDMATransfer();
 
+  int getModeDuration();
+  void advanceMode();
+
 public:
   GPU(Interrupts *interrupts, bool CGB = false,
       Memory *memory = nullptr); // Constructor
