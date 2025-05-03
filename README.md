@@ -59,3 +59,4 @@ Arrow Keys for movement
 For more information about Game Boy development and emulation, check out [GBDev](https://gbdev.io/).  
 APU blog post - [here](https://aidanvidal.github.io/posts/GameBoy_Dev_APU.html)  
 GPU blog post - [here](https://aidanvidal.github.io/posts/GameBoy_Dev_GPU.html)  
+CPU and MBC blog post - [here](https://aidanvidal.github.io/posts/GameBoy_Dev_Final.html)
