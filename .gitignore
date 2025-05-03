@@ -37,4 +37,3 @@ graphics
 testGPU.cpp
 ROMS/
 gameboy
-main.cpp
