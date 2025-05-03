@@ -196,7 +196,6 @@ void ChannelThree::updateLengthTimer() {
     // If length timer reaches zero, turn off the channel
     if (state.lengthTimer == 256) {
       setEnabled(false); // Disable channel
-      std::cout << "Channel Three Disabled due to length timer." << std::endl;
     }
   }
 }

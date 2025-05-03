@@ -174,7 +174,6 @@ void ChannelOne::updateLengthTimer() {
     state.lengthTimer++;
     if (state.lengthTimer == 64) {
       setEnabled(false);
-      std::cout << "Channel One Disabled due to length timer." << std::endl;
     }
   }
 }
@@ -248,7 +247,6 @@ void ChannelOne::sweepIteration() {
       int holder = getPeriod() + (getPeriod() / pow(2, getSweepStep()));
       if (holder > 2047) {
         setEnabled(false);
-        std::cout << "Channel One Disabled due to sweep." << std::endl;
       } else {
         setPeriod(holder);
       }

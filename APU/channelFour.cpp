@@ -187,7 +187,6 @@ void ChannelFour::updateLengthTimer() {
     // If length timer reaches zero, turn off the channel
     if (state.lengthTimer == 64) {
       setEnabled(false); // Disable channel
-      std::cout << "Channel Four Disabled due to length timer." << std::endl;
     }
   }
 }
