@@ -24,7 +24,6 @@ public:
   void saveBatteryData() override;
 
 private:
-  // Private functions
 
   // Private variables and classes
   unsigned int romSize;
@@ -32,17 +31,14 @@ private:
   string batteryPath = "";
   bool battery = false;
   bool ramNewData = false;
-  // uint8_t extRAM[4][0xBFFF - 0xA000 + 1];	// Somewhat temporary
-  uint8_t *extRAM;
+  uint8_t *ram;
   ifstream romFileStream;
   // MBC1 registers
   bool ramEnable;
   int romBankNumber;
   int romRamBankNumber = 0;
   bool romRamMode;
-
-  // Dynamically allocated data pointers
-  uint8_t *romData;
+  uint8_t *rom;
 };
 
 #endif // MBC1_H

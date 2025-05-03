@@ -18,7 +18,6 @@ public:
 	virtual void writeData(uint16_t address, uint8_t data) = 0;
 	virtual uint8_t readData(uint16_t address) = 0;
 
-	// Save battery definers
 	virtual void setBatteryLocation(string batteryPath) = 0;
 	virtual void saveBatteryData() = 0;
 

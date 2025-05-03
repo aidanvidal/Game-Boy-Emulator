@@ -2,73 +2,69 @@
 
 MBC3::MBC3(uint8_t *romData, unsigned int romSize, unsigned int ramSize,
            bool timerPresent)
-    : rom(romData), romSize(romSize), ramSize(ramSize), RTC(timerPresent) {
-  if (!RTC) {
-    ram = new uint8_t[ramSize];
-  } else {
-    ram = new uint8_t[ramSize + 48];
-  }
+    : rom(romData), romSize(romSize), ramSize(ramSize), hasRTC(timerPresent) {
+  // Allocate extra memory for RTC data if needed
+  ram = new uint8_t[hasRTC ? ramSize + 48 : ramSize];
 }
 
 MBC3::~MBC3() {
-  free(rom);
-  free(ram);
-  if (battery) {
+  if (battery && ramNewData) {
     saveBatteryData();
   }
+  free(rom);
+  free(ram);
 }
 
 void MBC3::writeData(uint16_t address, uint8_t data) {
-  if (address >= 0x0000 && address <= 0x1FFF) {
-    // If it's being disabled and there's new data written to RAM, save the data
-    // and reset the newData flag
-    if (battery & ramEnable && (data & 0xF) != 0xA && ramNewData) {
+  if (address <= 0x1FFF) {
+    // RAM Enable/Disable (0x0000-0x1FFF)
+    bool newRamEnable = (data & 0xF) == 0xA;
+    
+    // If RAM is being disabled and battery-backed RAM has changes, save it
+    if (battery && ramEnable && !newRamEnable && ramNewData) {
       saveBatteryData();
       ramNewData = false;
     }
-    ramEnable = (data & 0xF) == 0xA;
-  } else if (address >= 0x2000 && address <= 0x3FFF) {
+    ramEnable = newRamEnable;
+  } 
+  else if (address <= 0x3FFF) {
+    // ROM Bank Number (0x2000-0x3FFF)
     romBankNumber = data & 0x7F;
     if (romBankNumber == 0) {
-      romBankNumber = 1;
+      romBankNumber = 1; // Values of 0 are treated as 1
     }
-  } else if (address >= 0x4000 && address <= 0x5FFF) {
-    RAMRTCselect = data % 0xD;
-  } else if (address >= 0x6000 && address <= 0x7FFF) {
-    if (!latch && (data & 0x1) == 0x1 && RTC) {
+  } 
+  else if (address <= 0x5FFF) {
+    // RAM Bank Number or RTC Register Select (0x4000-0x5FFF)
+    RAMRTCSelect = data % 0xD;
+  } 
+  else if (address <= 0x7FFF) {
+    // Latch Clock Data (0x6000-0x7FFF)
+    bool newLatch = (data & 0x1) == 0x1;
+    if (!latch && newLatch && hasRTC) {
       latchTimer();
     }
-    latch = (data & 0x1) == 0x1;
-  } else if (address >= 0xA000 && address <= 0xBFFF) {
+    latch = newLatch;
+  } 
+  else if (address >= 0xA000 && address <= 0xBFFF) {
+    // External RAM or RTC Register access (0xA000-0xBFFF)
     if (ramEnable) {
-      if (RAMRTCselect < 4 && ramSize > 0) {
-        ram[((address & 0x1FFF) | (RAMRTCselect << 13)) & (ramSize - 1)] = data;
+      if (RAMRTCSelect < 4 && ramSize > 0) {
+        // RAM access
+        uint32_t ramAddress = ((address & 0x1FFF) | (RAMRTCSelect << 13)) & (ramSize - 1);
+        ram[ramAddress] = data;
         ramNewData = true;
-      } else if (RTC && RAMRTCselect >= 0x8 && RAMRTCselect <= 0xC) {
-        // Keep timer up-to-date before a write
-        updateTimer();
-        // I'm assuming writes here only reflect on the real time registers?
-        switch (RAMRTCselect) {
-          // Seconds
-        case 0x8:
-          realSecs = data;
-          break;
-          // Minutes
-        case 0x9:
-          realMins = data;
-          break;
-          // Hours
-        case 0xA:
-          realHours = data;
-          break;
-          // Days (lower)
-        case 0xB:
-          realDays = data;
-          break;
-          // Days (upper), halt, Day carry
-        case 0xC:
-          realDaysHi = data;
-          break;
+      } 
+      else if (hasRTC && RAMRTCSelect >= 0x8 && RAMRTCSelect <= 0xC) {
+        // RTC register access
+        updateTimer(); // Keep timer up-to-date before writing
+        
+        switch (RAMRTCSelect) {
+          case 0x8: realSecs = data; break;    // Seconds
+          case 0x9: realMins = data; break;    // Minutes
+          case 0xA: realHours = data; break;   // Hours
+          case 0xB: realDays = data; break;    // Days (lower)
+          case 0xC: realDaysHi = data; break;  // Days (upper), halt, Day carry
         }
       }
     }
@@ -76,167 +72,183 @@ void MBC3::writeData(uint16_t address, uint8_t data) {
 }
 
 uint8_t MBC3::readData(uint16_t address) {
-  // ROM Area
-  if (address >= 0x0000 && address <= 0x7FFF) {
-    uint32_t returnAddress = address & 0x3FFF;
+  if (address <= 0x7FFF) {
+    // ROM Access (0x0000-0x7FFF)
+    uint32_t romAddress = address & 0x3FFF;
+    
     if (address & 0x4000) {
-      returnAddress |= romBankNumber << 14;
+      // Upper bank (0x4000-0x7FFF)
+      romAddress |= romBankNumber << 14;
     }
-    return rom[returnAddress];
+    
+    return rom[romAddress];
   }
-  // RAM Area
   else if (address >= 0xA000 && address <= 0xBFFF) {
+    // External RAM or RTC Register access (0xA000-0xBFFF)
     if (ramEnable) {
-      if (RAMRTCselect < 4 && ramSize > 0) {
-        return ram[((address & 0x1FFF) | (RAMRTCselect << 13)) & (ramSize - 1)];
-      } else if (RTC && RAMRTCselect >= 0x8 && RAMRTCselect <= 0xC) {
-        switch (RAMRTCselect) {
-        // Seconds
-        case 0x8:
-          return latchSecs;
-          break;
-        // Minutes
-        case 0x9:
-          return latchMins;
-          break;
-        // Hours
-        case 0xA:
-          return latchHours;
-          break;
-        // Days (lower)
-        case 0xB:
-          return latchDays;
-          break;
-        // Days (upper), halt, Day carry
-        case 0xC:
-          return latchDaysHi;
-          break;
+      if (RAMRTCSelect < 4 && ramSize > 0) {
+        // RAM access
+        uint32_t ramAddress = ((address & 0x1FFF) | (RAMRTCSelect << 13)) & (ramSize - 1);
+        return ram[ramAddress];
+      } 
+      else if (hasRTC && RAMRTCSelect >= 0x8 && RAMRTCSelect <= 0xC) {
+        // RTC register access - return latched values
+        switch (RAMRTCSelect) {
+          case 0x8: return latchSecs;    // Seconds
+          case 0x9: return latchMins;    // Minutes
+          case 0xA: return latchHours;   // Hours
+          case 0xB: return latchDays;    // Days (lower)
+          case 0xC: return latchDaysHi;  // Days (upper), halt, Day carry
         }
       }
     }
   }
-  return 0xFF;
+  return 0xFF; // Default value for unmapped/disabled memory
 }
 
 void MBC3::setBatteryLocation(string inBatteryPath) {
   battery = false;
   batteryPath = inBatteryPath;
-  if (!RTC && Cartridge::loadBatteryFile(ram, ramSize, batteryPath)) {
-    battery = true; // Disable battery if load wasn't sucessful;
-  }
-  // Hackish way of reading in timer values from file (will result in 1 error
-  // though).
-  else if (RTC && Cartridge::loadBatteryFile(ram, ramSize + 48, batteryPath)) {
+  
+  // Standard RAM-only battery
+  if (!hasRTC && Cartridge::loadBatteryFile(ram, ramSize, batteryPath)) {
     battery = true;
-    // We'll have some RTC values available at the end of ram array.
+  }
+  // RTC battery handling
+  else if (hasRTC && Cartridge::loadBatteryFile(ram, ramSize + 48, batteryPath)) {
+    battery = true;
+    
+    // Extract RTC values from the end of ram array
     unsigned int offset = ramSize;
-    // "Real" time
-    // Thanks to whoever decided these should be 4-byte little endians
+    
+    // "Real" time values
     realSecs = ram[offset];
     realMins = ram[offset + 4];
     realHours = ram[offset + 8];
     realDays = ram[offset + 12];
     realDaysHi = ram[offset + 16];
-    // Latched time
+    
+    // Latched time values
     latchSecs = ram[offset + 20];
     latchMins = ram[offset + 24];
     latchHours = ram[offset + 28];
     latchDays = ram[offset + 32];
     latchDaysHi = ram[offset + 36];
-    // Saved unix time
+    
+    // Extract saved system time
+    currentTime = 0;
     for (int i = 0; i < 8; i++) {
-      currentTime |= (ram[offset + 40 + i]) << (8 * i);
+      currentTime |= (time_t)(ram[offset + 40 + i]) << (8 * i);
     }
-    // If the time is 0, it's probably a new file. Or you're from the 70s.
+    
+    // Use current system time if saved time is invalid
     if (currentTime <= 0) {
       currentTime = time(nullptr);
     }
+    
     // Update the timer now
     updateTimer();
-  } else if (RTC) {
-    cout << "\nERROR: Save File does not contain timer values...\n";
+  } 
+  else if (hasRTC) {
+    // Failed to load RTC data
+    currentTime = time(nullptr);
   }
 }
 
 void MBC3::saveBatteryData() {
-  if (battery && !RTC) {
+  if (!battery) return;
+  
+  if (!hasRTC) {
+    // Standard RAM-only save
     Cartridge::saveBatteryFile(ram, ramSize, batteryPath);
-  } else if (battery && RTC) {
-    // Update timer
+  } 
+  else {
+    // Update RTC before saving
     updateTimer();
-    // Put timer values on array before writing
+    
+    // Store RTC values in the extended section of ram
     unsigned int offset = ramSize;
-
+    
     // Real time
     ram[offset] = realSecs;
     ram[offset + 4] = realMins;
     ram[offset + 8] = realHours;
     ram[offset + 12] = realDays;
     ram[offset + 16] = realDaysHi;
-    // Latched
+    
+    // Latched time
     ram[offset + 20] = latchSecs;
     ram[offset + 24] = latchMins;
     ram[offset + 28] = latchHours;
     ram[offset + 32] = latchDays;
     ram[offset + 36] = latchDaysHi;
-    // Unix time
+    
+    // System time
     for (int i = 0; i < 8; i++) {
       ram[offset + 40 + i] = (uint8_t)(currentTime >> (8 * i));
     }
+    
+    // Save the complete data
     Cartridge::saveBatteryFile(ram, ramSize + 48, batteryPath);
   }
+  
+  ramNewData = false;
 }
 
 void MBC3::updateTimer() {
-  // Get the new unix time
+  // Get the current system time
   time_t newTime = time(nullptr);
-  // Time difference in seconds
-  unsigned int difference = 0;
-  // Return if we either are trying to "travel back in time" or if timer halt
-  // bit is set Update the stored timer value in either case
+  
+  // Calculate time difference in seconds
+  unsigned int timeDiff = 0;
+  
+  // Skip update if: 
+  // 1. Time went backward (system clock changed)
+  // 2. Timer halt bit is set
   if (newTime > currentTime && (realDaysHi & 0x40) != 0x40) {
-    difference = (unsigned int)(newTime - currentTime);
+    timeDiff = (unsigned int)(newTime - currentTime);
     currentTime = newTime;
   } else {
     currentTime = newTime;
     return;
   }
-  // Perform the incrementing calculations, on the "realtime" values.
-  // Hope my idea is right here
-  // First seconds
-  unsigned int newSeconds = realSecs + difference;
-  // If the new time isn't any different, then don't bother executing anymore.
-  if (newSeconds == realSecs)
-    return;
+  
+  // No time has passed
+  if (timeDiff == 0) return;
+
+  // Update seconds
+  unsigned int newSeconds = realSecs + timeDiff;
   realSecs = newSeconds % 60;
-  // Minutes
+  
+  // Update minutes
   unsigned int newMins = realMins + (newSeconds / 60);
-  if (newMins == realMins)
-    return;
+  if (newMins == realMins) return;
   realMins = newMins % 60;
-  // Hours
+  
+  // Update hours
   unsigned int newHours = realHours + (newMins / 60);
-  if (newHours == realHours)
-    return;
+  if (newHours == realHours) return;
   realHours = newHours % 24;
-  // Days
-  // Accounts for high bit.
-  unsigned int realDaysUnsplit = ((realDaysHi & 0x1) << 8) | realDays;
-  unsigned int newDays = realDaysUnsplit + (newHours / 24);
-  if (newDays == realDaysUnsplit)
-    return;
-  realDays = newDays; // Low 8-bits applies
-  // High bit on days counter
-  realDaysHi &= 0xFE;
-  realDaysHi |= (newDays >> 8) & 0x1; // Applies the 8th bit
-  // Overflow bit
+  
+  // Update days (including high bit)
+  unsigned int fullDays = ((realDaysHi & 0x1) << 8) | realDays;
+  unsigned int newDays = fullDays + (newHours / 24);
+  if (newDays == fullDays) return;
+  
+  // Update days counter
+  realDays = newDays & 0xFF;                // Low 8-bits
+  realDaysHi = (realDaysHi & 0xFE) | ((newDays >> 8) & 0x1); // High bit
+  
+  // Set day counter overflow flag if > 511 days
   if (newDays > 511) {
     realDaysHi |= 0x80;
   }
 }
 
 void MBC3::latchTimer() {
+  // Update and then copy the current time to latched time
   updateTimer();
+  
   latchSecs = realSecs;
   latchMins = realMins;
   latchHours = realHours;

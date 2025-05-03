@@ -2,6 +2,7 @@
 #include "APU/APU.h"
 #include "Cartridges/MBC1.h"
 #include "Cartridges/MBC3.h"
+#include "Cartridges/MBC5.h"
 #include "Cartridges/NoMBC.h"
 #include <cstdint>
 #include <fstream>
@@ -471,28 +472,36 @@ void Memory::loadCartridge(const std::string filename) {
     cartridge->setBatteryLocation(batteryPath); // Set battery location
     break;
   case 0x19: // MBC5
-    // TODO: Handle MBC5
     std::cout << "MBC5" << std::endl;
+    cartridge = new MBC5(romData, romSize, 0); // Create MBC5 object
     break;
   case 0x1A: // MBC5 + RAM
-    // TODO: Handle MBC5 + RAM
     std::cout << "MBC5 + RAM" << std::endl;
+    cartridge = new MBC5(romData, romSize, ramSizeValue); // Create MBC5 + RAM
+                                                          // object
     break;
   case 0x1B: // MBC5 + RAM + BATTERY
-    // TODO: Handle MBC5 + RAM + BATTERY
     std::cout << "MBC5 + RAM + BATTERY" << std::endl;
+    cartridge = new MBC5(romData, romSize, ramSizeValue); // Create MBC5 + RAM
+                                                          // + BATTERY object
+    cartridge->setBatteryLocation(batteryPath); // Set battery location
     break;
   case 0x1C: // MBC5 + RUMBLE
-    // TODO: Handle MBC5 + RUMBLE
     std::cout << "MBC5 + RUMBLE" << std::endl;
+    cartridge = new MBC5(romData, romSize, 0); // Create MBC5 + RUMBLE object
     break;
   case 0x1D: // MBC5 + RUMBLE + RAM
-    // TODO: Handle MBC5 + RUMBLE + RAM
     std::cout << "MBC5 + RUMBLE + RAM" << std::endl;
+    cartridge =
+        new MBC5(romData, romSize, ramSizeValue); // Create MBC5 + RUMBLE
+                                                  // + RAM object
     break;
   case 0x1E: // MBC5 + RUMBLE + RAM + BATTERY
-             // TODO: Handle MBC5 + RUMBLE + RAM + BATTERY
     std::cout << "MBC5 + RUMBLE + RAM + BATTERY" << std::endl;
+    cartridge =
+        new MBC5(romData, romSize, ramSizeValue); // Create MBC5 + RUMBLE +
+                                                  // RAM + BATTERY object
+    cartridge->setBatteryLocation(batteryPath);   // Set battery location
     break;
   default:
     std::cout << "Unknown MBC Type" << std::endl;
@@ -504,7 +513,7 @@ void Memory::updateCycles(int cycles) {
   gpu->updateGPU(cycles);           // Update GPU cycles
   apu->updateChannelTimers(cycles); // Update APU channel timers
   apu->apuStep(cycles);             // Update APU
-  // apu->getAudioSample(cycles); // Get APU audio sample
+  apu->getAudioSample(cycles); // Get APU audio sample
 }
 void Memory::updateTimers(int cycles) { timers->updateTimers(cycles); }
 void Memory::renderGPU(SDL_Renderer *ren) {

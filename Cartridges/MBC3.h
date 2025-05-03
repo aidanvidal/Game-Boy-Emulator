@@ -24,32 +24,29 @@ private:
 	string batteryPath = "";
 	bool ramNewData = false;
 
-	//uint8_t extRAM[4][0xBFFF - 0xA000 + 1];	// Somewhat temporary
 	uint8_t* ram;
 	bool ramEnable = false;
 	int romBankNumber = 1;
-	uint8_t RAMRTCselect = 0;
+	uint8_t RAMRTCSelect = 0;
 
 	// RTC stuff
-	bool RTC = false;
-	// Real time (Updated at certain points).
+	bool hasRTC = false;
+	// Real time
 	uint8_t realSecs = 0;
 	uint8_t realMins = 0;
 	uint8_t realHours = 0;
 	uint8_t realDays = 0;
 	uint8_t realDaysHi = 0;
 
-	// Latched time (what's read by the game, latched in by a trigger)
+	// Latched time
 	uint8_t latchSecs = 0;
 	uint8_t latchMins = 0;
 	uint8_t latchHours = 0;
 	uint8_t latchDays = 0;
 	uint8_t latchDaysHi = 0;
-
-	// The unix/epoch time since the last timer update.
+	
 	time_t currentTime = 0;
 
-	// Checks the last write to the latch register (latch happens from low to high)
 	bool latch = false;
 
 	// Update timer function (calculates difference in seconds, increments the relevant counters).
